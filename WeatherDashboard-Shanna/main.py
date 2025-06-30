@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
+
 class WeatherApp:
     def __init__(self):
         self.api_key = os.getenv("API_KEY")
