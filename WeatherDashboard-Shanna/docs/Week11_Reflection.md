@@ -28,10 +28,10 @@ Slack is a great resource i use if i have any problems
 
 | # | Feature Name         | Difficulty | Why You Chose It                                       |
 |---|----------------------|------------|--------------------------------------------------------|
-| 1 | Simple Statistics    | ⭐          | Reinforces skills in file handling and data parsing    |
-| 2 | Weather Icons        | ⭐⭐         | Adds visual polish and a more engaging user interface  |
-| 3 | Tomorrow’s Guess     | ⭐⭐⭐        | Challenges me to apply logic and analyze patterns      |
-|   | Enhancement: Mascot  | ✨          | Gives the app personality and makes it more memorable |
+| 1 | Simple Statistics    | ⭐         | Reinforces skills in file handling and data parsing    |
+| 2 | Weather Icons        | ⭐⭐      | Adds visual polish and a more engaging user interface   |
+| 3 | Tomorrow’s Guess     | ⭐⭐⭐    | Challenges me to apply logic and analyze patterns      |
+| 4 | Enhancement: Mascot  | ✨         | Gives the app personality and makes it more memorable  |
 
 
                  ┌────────────────────┐

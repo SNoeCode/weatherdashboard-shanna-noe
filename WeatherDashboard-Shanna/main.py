@@ -1,47 +1,52 @@
-import tkinter as tk
-import requests
+from pathlib import Path
 import os
+import tkinter as tk
+from tkinter import ttk, messagebox
 from dotenv import load_dotenv
+from weather_data_fetcher import WeatherDataFetcher
+from weather_db import WeatherDB
+from automated_weather_tracker import AutomatedWeatherTracker
+from weather_display_ui import WeatherAppGUI  
+from config import Config
+
 
 load_dotenv()
 
-
-
-class WeatherApp:
-    def __init__(self):
-        self.api_key = os.getenv("API_KEY")
-        self.root = tk.Tk()
-        self.root.title("Weather App")
-        self.root.geometry("400x300")
-
-        self.city_entry = tk.Entry(self.root, width=25)
-        self.city_entry.pack(pady=10)
-
-        self.button = tk.Button(self.root, text="Get Weather", command=self.get_weather)
-        self.button.pack()
-
-        self.result_label = tk.Label(self.root, text="")
-        self.result_label.pack(pady=20)
-
-    def get_weather(self):
-        city = self.city_entry.get()
-        if city:
-            url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={self.api_key}&units=imperial"
-            try:
-                response = requests.get(url, timeout=10)
-                data = response.json()
-                if response.status_code == 200:
-                    temp = data['main']['temp']
-                    desc = data['weather'][0]['description']
-                    self.result_label.config(text=f"{city}: {temp}°F, {desc.title()}")
-                else:
-                    self.result_label.config(text="City not found.")
-            except Exception as e:
-                self.result_label.config(text=str(e))
-
-    def run(self):
-        self.root.mainloop()
-
 if __name__ == "__main__":
-    app = WeatherApp()
+    #Initialize system components
+    api_key = os.getenv("WEATHER_API_KEY")
+    if not api_key:
+        raise ValueError("WEATHER_API_KEY not set in .env")
+    
+    config = Config.load_from_env()
+
+
+
+    db = WeatherDB()
+    db.update_location("Salt Lake City", "US", latitude=40.7608, longitude=-111.8910, timezone="America/Denver")
+    db.update_location("Knoxville", "US", latitude=35.9606, longitude=-83.9207, timezone="America/New_York")
+    db.update_location("Tokyo", "JP", latitude=35.6828, longitude=139.7595, timezone="Asia/Tokyo")    
+
+
+    db.export_locations_to_csv()
+    #Show recent API errors before app starts
+    print("\n🔍 Recent Weather Errors:")
+    errors = db.get_error_log(limit=10)
+    for err in errors:
+        print(f"- {err['timestamp']} | {err['city']}, {err['country']} | {err['status']} → {err.get('error', 'N/A')}")
+    fetcher = WeatherDataFetcher(api_key)
+    tracker = AutomatedWeatherTracker(collector=fetcher, database=db)
+
+    #Add default cities for tracking
+    tracker.add_location("Salt Lake City", "US")
+    tracker.add_location("Knoxville", "US")
+    tracker.add_location("Tokyo", "JP")
+    tracker.start_scheduled_collection(interval_minutes=30)
+    tracker.collect_all_locations() 
+
+
+    
+    import logging
+    logger = logging.getLogger("WeatherDashboard")
+    app = WeatherAppGUI(fetcher=fetcher, db=db, tracker=tracker, logger=logger)
     app.run()
