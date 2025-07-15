@@ -171,7 +171,16 @@ class WeatherDB:
                 kwargs.get('timezone'),
                 int(kwargs.get('is_active', True))
             ))
-
+    def get_all_readings(self) -> List[Dict]:
+        with self.get_connection() as conn:
+            rows = conn.execute("SELECT * FROM readings ORDER BY timestamp DESC").fetchall()
+            return [dict(row) for row in rows]
+        
+    def get_all_locations(self) -> List[Dict]:
+        with self.get_connection() as conn:
+            rows = conn.execute("SELECT * FROM locations ORDER BY created_at DESC").fetchall()
+            return [dict(row) for row in rows]        
+    
     def export_locations_to_csv(self, output_file: str = "./data/weather_data.csv") -> bool:
         os.makedirs(os.path.dirname(output_file), exist_ok=True)
         with self.get_connection() as conn:
@@ -189,3 +198,22 @@ class WeatherDB:
             else:
                 print("⚠️ No location data to export.")
                 return False
+            
+    def export_readings_to_csv(self, output_file: str = "./data/weather_readings.csv") -> bool:
+        os.makedirs(os.path.dirname(output_file), exist_ok=True)
+        with self.get_connection() as conn:
+            cursor = conn.execute("SELECT * FROM readings ORDER BY timestamp DESC")
+            rows = cursor.fetchall()
+            if rows:
+                headers = [description[0] for description in cursor.description]
+                with open(output_file, mode="w", newline='', encoding='utf-8') as f:
+                    writer = csv.writer(f)
+                    writer.writerow(headers)
+                    for row in rows:
+                        writer.writerow(row)
+                print(f"✅ Readings exported to {output_file}")
+                return True
+            else:
+                print("⚠️ No readings to export.")
+                return False
+

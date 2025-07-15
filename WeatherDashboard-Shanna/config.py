@@ -29,6 +29,9 @@ class Config:
     retry_limit: int = 3
     request_timeout: int = 10
     base_url: str = 'https://api.openweathermap.org/data/2.5'
+    default_timezone: str = 'America/New_York'
+
+
     logger: Optional[logging.Logger] = None
 
     @classmethod
@@ -43,6 +46,8 @@ class Config:
 
         log_level = os.getenv('LOG_LEVEL', 'INFO')
         logger = setup_logger("WeatherApp", log_level)
+        default_tz = os.getenv('DEFAULT_TIMEZONE', 'America/New_York')
+
 
         return cls(
             api_key=api_key,
@@ -51,5 +56,6 @@ class Config:
             retry_limit=int(os.getenv('MAX_RETRIES', '3')),
             request_timeout=int(os.getenv('REQUEST_TIMEOUT', '10')),
             base_url=os.getenv('BASE_URL', 'https://api.openweathermap.org/data/2.5'),
+            default_timezone=default_tz,
             logger=logger
         )

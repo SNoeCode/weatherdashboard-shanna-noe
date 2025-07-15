@@ -19,10 +19,22 @@ class WeatherDataFetcher:
         self.session = requests.Session()           #Reusable session for performance
         self.min_request_interval = 1.0             #Prevents over-requesting (rate limiting)
         self.last_request = 0                       #Tracks time of last call
+        self.failed_cities = {}
+
 
         #Logger setup for error tracking
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
+        
+    def register_failure(self, city: str):
+            self.failed_cities[city] = self.failed_cities.get(city, 0) + 1
+
+    def is_fake_or_unresolvable(self, city: str, threshold: int = 3) -> bool:
+        city = city.lower()
+        if city in {"testville", "demo city"}:
+            return True
+        return self.failed_cities.get(city.title(), 0) >= threshold
+
 
     def _delay_between_request(self):
         """
@@ -58,7 +70,11 @@ class WeatherDataFetcher:
                 response = self.session.get(url, params=params, timeout=10)  #Send request
 
                 if response.status_code == 200:
-                    return response.json()          #Success — return parsed data
+                    return response.json()   
+                elif response.status_code != 200:
+                    city = params.get("q", "Unknown").split(",")[0].title()
+                    self.register_failure(city)
+                    return None
                 elif response.status_code == 401:
                     self.logger.error("❌ Invalid API key.")
                     return None
@@ -88,6 +104,21 @@ class WeatherDataFetcher:
         Returns:
             Optional[Dict]: A structured weather data dictionary.
         """
+        city = city.strip().title()
+        if country:
+            country = country.upper()
+        else:
+            country = ""
+
+
+
+        if self.is_fake_or_unresolvable(city):
+            self.logger.warning(f"⛔️ Skipping persistently failing city: {city}")
+            return None
+
+
+
+
         location = f"{city},{country}" if country else city
         params = {"q": location, "units": units}
 
@@ -116,18 +147,52 @@ class WeatherDataFetcher:
             self.logger.error(f"🧨 Data parsing error for {location}: {err}")
             return None
 
-    def fetch_five_day_forecast(self, city, country=None, units='metric') -> Optional[Dict]:
+    def fetch_five_day_forecast(self, city: str, country: Optional[str] = None, units: str = "metric") -> Optional[Dict]:
         """
-        Retrieves a 5-day forecast in 3-hour blocks.
+        Retrieves a 5-day forecast in 3-hour intervals using city and country.
 
         Args:
             city (str): City name.
             country (Optional[str]): 2-letter country code.
-            units (str): Measurement system ('metric' by default).
+            units (str): Measurement system.
 
         Returns:
-            Optional[Dict]: Raw forecast data (to be grouped later in GUI).
+            Optional[Dict]: Parsed forecast data or None.
         """
         location = f"{city},{country}" if country else city
         params = {"q": location, "units": units}
         return self._api_request("forecast", params)
+
+
+    # def fetch_seven_day_forecast(self, city: str, country: Optional[str] = None, units: str = "metric") -> Optional[Dict]:
+    #     """
+    #     Retrieves a 7-day forecast using city and country by resolving coordinates.
+
+    #     Args:
+    #         city (str): City name.
+    #         country (Optional[str]): 2-letter country code.
+    #         units (str): Measurement system.
+
+    #     Returns:
+    #         Optional[Dict]: Parsed forecast data or None.
+    #     """
+    #     location = f"{city},{country}" if country else city
+    #     params = {"q": location, "units": units}
+    #     geo_data = self._api_request("weather", params)
+
+    #     if not geo_data or "coord" not in geo_data:
+    #         self.logger.error(f"❌ Failed to retrieve coordinates for {location}")
+    #         return None
+
+    #     lat = geo_data["coord"]["lat"]
+    #     lon = geo_data["coord"]["lon"]
+
+    #     onecall_params = {
+    #         "lat": lat,
+    #         "lon": lon,
+    #         "exclude": "minutely,hourly,alerts",
+    #         "units": units,
+    #         "appid": self.api_key
+    #     }
+
+    #     return self._api_request("onecall", onecall_params)
