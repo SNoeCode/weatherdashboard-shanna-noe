@@ -42,7 +42,22 @@ if __name__ == "__main__":
     # tracker.start_scheduled_collection(interval_minutes=30)
     threading.Thread(target=tracker.start_scheduled_collection, args=(30,), daemon=True).start()
     tracker.collect_all_locations()
+    city = "Knoxville"
+    country = "US"
+    forecast_data = fetcher.fetch_five_day_forecast(city, country)
 
+    if forecast_data:
+        five_day_summary = fetcher.extract_five_day_summary(forecast_data)
+        print(f"\n📅 5-Day Forecast for {city}, {country}:")
+        for entry in five_day_summary:
+            dt_txt = entry["dt_txt"]
+            temp = entry["main"]["temp"]
+            description = entry["weather"][0]["description"]
+            print(f"{dt_txt} | {temp:.1f}°C | {description}")
+    else:
+        print("❌ Could not fetch forecast data.")
+
+    print("✅ Launching Weather Dashboard GUI...")
     config = Config.load_from_env()
     logger = logging.getLogger("WeatherDashboard")
     app = WeatherAppGUI(fetcher=fetcher, db=db, tracker=tracker, logger=logger)

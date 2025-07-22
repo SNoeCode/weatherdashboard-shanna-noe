@@ -64,5 +64,4 @@ def display_weather_with_icon(weather_frame, weather_data, fetcher, render_forec
     #Forecast render
     forecast = fetcher.fetch_five_day_forecast(weather_data["city"], weather_data["country"])
     if forecast:
-        render_forecast(weather_frame, forecast, weather_data["country"])
-
+       render_forecast(weather_frame, forecast["list"], weather_data["country"])

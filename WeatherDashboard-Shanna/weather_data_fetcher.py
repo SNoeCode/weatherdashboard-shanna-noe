@@ -2,8 +2,10 @@
 import requests                 
 import time                    
 import logging                 
-from datetime import datetime
-from typing import Dict, Optional  
+from datetime import datetime, timedelta
+from collections import defaultdict
+from typing import Dict, List,  Optional 
+
 
 class WeatherDataFetcher:
     def __init__(self, api_key: str, base_url: str = "https://api.openweathermap.org/data/2.5"):
@@ -146,53 +148,50 @@ class WeatherDataFetcher:
         except (KeyError, IndexError, TypeError) as err:
             self.logger.error(f"🧨 Data parsing error for {location}: {err}")
             return None
-
+        
+        
     def fetch_five_day_forecast(self, city: str, country: Optional[str] = None, units: str = "metric") -> Optional[Dict]:
         """
         Retrieves a 5-day forecast in 3-hour intervals using city and country.
-
-        Args:
-            city (str): City name.
-            country (Optional[str]): 2-letter country code.
-            units (str): Measurement system.
-
-        Returns:
-            Optional[Dict]: Parsed forecast data or None.
         """
         location = f"{city},{country}" if country else city
         params = {"q": location, "units": units}
-        return self._api_request("forecast", params)
+
+        forecast = self._api_request("forecast", params)
+        if forecast:
+            self.logger.info(f"✅ Forecast list length: {len(forecast.get('list', []))}")
+        else:
+            self.logger.warning(f"❌ No forecast returned for: {location}")
+        return forecast
+    
 
 
-    # def fetch_seven_day_forecast(self, city: str, country: Optional[str] = None, units: str = "metric") -> Optional[Dict]:
-    #     """
-    #     Retrieves a 7-day forecast using city and country by resolving coordinates.
 
-    #     Args:
-    #         city (str): City name.
-    #         country (Optional[str]): 2-letter country code.
-    #         units (str): Measurement system.
+    def extract_five_day_summary(self, forecast: Dict) -> List[Dict]:
+        """
+        Extracts 5 daily forecast summaries from 3-hour interval forecast data.
+        Prefers 12:00 PM data point for each day if available.
+        """
+        forecast_list = forecast.get("list", [])
+        daily_data = defaultdict(list)
 
-    #     Returns:
-    #         Optional[Dict]: Parsed forecast data or None.
-    #     """
-    #     location = f"{city},{country}" if country else city
-    #     params = {"q": location, "units": units}
-    #     geo_data = self._api_request("weather", params)
+        # Organize forecast data by date
+        for entry in forecast_list:
+            dt_txt = entry.get("dt_txt")
+            if dt_txt:
+                date = dt_txt.split(" ")[0]
+                daily_data[date].append(entry)
 
-    #     if not geo_data or "coord" not in geo_data:
-    #         self.logger.error(f"❌ Failed to retrieve coordinates for {location}")
-    #         return None
+        five_day_forecasts = []
 
-    #     lat = geo_data["coord"]["lat"]
-    #     lon = geo_data["coord"]["lon"]
+        # Get forecasts for the next 5 distinct days
+        for date in sorted(daily_data.keys())[:5]:
+            entries = daily_data[date]
+            # Prefer forecast at 12:00:00
+            preferred_entry = next(
+                (e for e in entries if "12:00:00" in e["dt_txt"]),
+                entries[len(entries)//2]  # fallback to middle of the day
+            )
+            five_day_forecasts.append(preferred_entry)
 
-    #     onecall_params = {
-    #         "lat": lat,
-    #         "lon": lon,
-    #         "exclude": "minutely,hourly,alerts",
-    #         "units": units,
-    #         "appid": self.api_key
-    #     }
-
-    #     return self._api_request("onecall", onecall_params)
+        return five_day_forecasts
