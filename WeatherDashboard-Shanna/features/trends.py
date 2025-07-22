@@ -3,7 +3,7 @@ from tkinter import ttk
 from datetime import datetime, timedelta
 
 def detect_trend(readings):
-    """Analyze temperature trend from recent readings"""
+    """Analyze temperature trend from recent reading"""
     if len(readings) < 2:
         return "↔️ Steady", "Not enough data for trend analysis", "#FFB347"
     
