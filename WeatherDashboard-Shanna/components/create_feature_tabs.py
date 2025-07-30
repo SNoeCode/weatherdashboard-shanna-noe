@@ -229,8 +229,8 @@ class CreateFeatureTabs:
         try:
             city = self.get_city_callback()
             country = "US"
-            stats_text = get_weather_stats(self.db, city, country)
-            
+            state = "TN"
+            stats_text = get_weather_stats(self.db, city, state, country)
             if self.stats_label:
                 self.stats_label.config(text=f"📊 Statistics for {city}, {country}:\n\n{stats_text}")
                 
@@ -326,4 +326,4 @@ class CreateFeatureTabs:
             return False
         except Exception as e:
             self.logger.error(f"Error calling {method_name} on {type(panel).__name__ if panel else 'None'}: {e}")
-            return False---
+            return False

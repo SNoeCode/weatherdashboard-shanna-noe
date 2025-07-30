@@ -66,6 +66,12 @@ class WeatherAppGUI:
         # Initialize theme manager
         self.theme_manager = ThemeManager(self.root)
         self.weather_graphs = WeatherGraphs(self.theme_manager)
+        self.create_header()
+        self.create_tab_interface()
+        
+        self.root.after(1000, self.get_weather_threaded)
+        self.summary_label = ttk.Label(self.root, text="", font=("Segoe UI", 10), foreground="#334155")
+        self.summary_label.grid(row=2, column=0, sticky="w", padx=20, pady=(10, 0))
         
         
         # self.header = CreateHeader(
@@ -76,12 +82,6 @@ class WeatherAppGUI:
         # city, country = self.header.get_location()
         
 
-        # self.create_header()
-        # self.create_tab_interface()
-        
-        # self.root.after(1000, self.get_weather_threaded)
-        # self.summary_label = ttk.Label(self.root, text="", font=("Segoe UI", 10), foreground="#334155")
-        # self.summary_label.grid(row=2, column=0, sticky="w", padx=20, pady=(10, 0))
         # self.display_features.display_current_weather(weather_data)
     
     
@@ -182,8 +182,8 @@ class WeatherAppGUI:
     #     fetcher=self.fetcher
     # )
         
-        # Create the dashboard layout
-        # self.dashboard_layout.create_dashboard_layout(dashboard_frame)
+    #     Create the dashboard layout
+    #     self.dashboard_layout.create_dashboard_layout(dashboard_frame)
         
     
     def create_dashboard_tab(self):
@@ -308,7 +308,7 @@ class WeatherAppGUI:
             btn = tk.Button(self.activity_content_frame, text=activity,
                            font=("Segoe UI", 12), bg="#e5e7eb", fg="#374151",
                            relief="flat", pady=10, cursor="hand2",
-                           command=lambda a=activity: self.show_activity_detail(a))
+                           command=lambda a=activity: self.display_activity_detail(a))
             btn.grid(row=i, column=0, sticky="ew", pady=5, padx=10)
             self.activity_content_frame.grid_columnconfigure(0, weight=1)
     
@@ -365,7 +365,7 @@ class WeatherAppGUI:
         refresh_btn = tk.Button(controls_frame, text="🔄 Refresh Stats",
                                font=("Segoe UI", 12, "bold"),
                                bg="#3b82f6", fg="white", padx=20, pady=10,
-                               cursor="hand2", command=self.show_statistics)
+                               cursor="hand2", command=self.display_statistics)
         refresh_btn.pack(side="left", padx=(0, 10))
         
         export_btn = tk.Button(controls_frame, text="💾 Export Data",
@@ -694,7 +694,7 @@ class WeatherAppGUI:
                 btn = tk.Button(self.activity_content_frame, text=activity,
                                font=("Segoe UI", 11), bg="#e8f4fd", fg="#2c3e50",
                                relief="flat", pady=8, cursor="hand2",
-                               command=lambda a=activity: self.show_activity_detail(a))
+                               command=lambda a=activity: self.display_activity_detail(a))
                 btn.grid(row=i, column=0, sticky="ew", pady=3, padx=10)
                 self.activity_content_frame.grid_columnconfigure(0, weight=1)
                 
@@ -811,21 +811,52 @@ class WeatherAppGUI:
                           f"Great choice! {activity} is perfect for today's weather conditions.\n\n"
                           f"Enjoy your activity and stay safe!")
     
-    def display_statistics(self):     
+    def display_statistics(self) -> None:
+        """Display weather statistics based on entry fields."""
         try:
+            if not all([
+                hasattr(self, "city_entry"), hasattr(self, "state_entry"),
+                hasattr(self, "country_entry"), hasattr(self, "stats_label")
+            ]):
+                self.logger.error("One or more input fields are not initialized.")
+                if hasattr(self, "stats_label"):
+                    self.stats_label.config(text="❌ Error: Missing input fields.")
+                return
+
             city = self.city_entry.get().strip() or "Knoxville"
+            state = self.state_entry.get().strip() or "TN"
             country = self.country_entry.get().strip() or "US"
+
+            stats_text = get_weather_stats(self.db, city, state, country)
+            self.stats_label.config(
+                text=f"📊 Statistics for {city}, {state}, {country}:\n\n{stats_text}"
+            )
+
+        except Exception as e:
+            self.logger.error(f"Error displaying statistics: {e}")
+            if hasattr(self, "stats_label"):
+                self.stats_label.config(text=f"❌ Error: {str(e)}")
+                
             
-            # Get statistics using imported function
-            stats_text = get_weather_stats(self.db, city, country)
-            
-            # Update display
-            self.stats_label.config(text=f"📊 Statistics for {city}, {country}:\n\n{stats_text}")
-            
+    def show_statistics(self) -> None:
+        """Show weather statistics using the callback and default location data."""
+        try:
+            city = self.get_city_callback() if hasattr(self, "get_city_callback") else "Knoxville"
+            state = "TN"  # You can replace this with a dynamic value if desired
+            country = "US"
+
+            stats_text = get_weather_stats(self.db, city, state, country)
+
+            if hasattr(self, "stats_label") and self.stats_label:
+                self.stats_label.config(
+                    text=f"📊 Statistics for {city}, {state}, {country}:\n\n{stats_text}"
+                )
+
         except Exception as e:
             self.logger.error(f"Error showing statistics: {e}")
-            self.stats_label.config(text=f"Error loading statistics: {str(e)}")
-    
+            if hasattr(self, "stats_label") and self.stats_label:
+                self.stats_label.config(text=f"❌ Error loading statistics: {str(e)}")
+
     def export_data(self):
         try:
             filename = filedialog.asksaveasfilename(

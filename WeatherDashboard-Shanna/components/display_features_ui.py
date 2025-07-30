@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Union, List
+from typing import Dict, Optional, Union, List, Callable
 from collections import defaultdict, Counter
 from datetime import datetime, timedelta, timezone
 import os
@@ -38,7 +38,7 @@ from features.graphs_and_charts import WeatherGraphs, GraphsAndChartsPanel
 from utils.emoji import WeatherEmoji
 from services.weather_stats import get_weather_stats
 from features.theme_switcher import ThemeManager
-
+from services.weather_stats import get_weather_stats
 class DisplayFeatures:
     def __init__(self, parent, theme_manager, db, logger, fetcher, cfg, city_entry=None, country_entry=None):
         self.parent = parent
@@ -84,46 +84,116 @@ class DisplayFeatures:
         messagebox.showinfo("Activity Suggestion", 
                             f"Great choice! {activity} is perfect for today's weather conditions.\n\n"
                             f"Enjoy your activity and stay safe!")
-   
-    def show_statistics(self):     
-        try:
-            city = self.city_entry.get().strip() if self.city_entry else "Knoxville"
-            country = self.country_entry.get().strip() if self.country_entry else "US"
+    state_entry: Optional[ttk.Entry]
+    get_city_callback: Optional[Callable]
+    # def display_statistics(self):     
+    #     try:
+    #         city = self.city_entry.get().strip() if self.city_entry else "Knoxville"
+    #         country = self.country_entry.get().strip() if self.country_entry else "US"
             
-            # Get statistics using imported function
-            stats_text = get_weather_stats(self.db, city, country)
+    #         # Get statistics using imported function
+    #         stats_text = get_weather_stats(self.db, city, country)
             
-            # Update display
-            if self.stats_label:
-                self.stats_label.config(text=f"📊 Statistics for {city}, {country}:\n\n{stats_text}")
+    #         # Update display
+    #         if self.stats_label:
+    #             self.stats_label.config(text=f"📊 Statistics for {city}, {country}:\n\n{stats_text}")
             
-        except Exception as e:
-            self.logger.error(f"Error showing statistics: {e}")
-            if self.stats_label:
-                self.stats_label.config(text=f"Error loading statistics: {str(e)}")
+    #     except Exception as e:
+    #         self.logger.error(f"Error showing statistics: {e}")
+    #         if self.stats_label:
+    #             self.stats_label.config(text=f"Error loading statistics: {str(e)}")
     
     def display_activity_detail(self, activity):    
         messagebox.showinfo("Activity Suggestion", 
                             f"Great choice! {activity} is perfect for today's weather conditions.\n\n"
                             f"Enjoy your activity and stay safe!")
         
-    def display_statistics(self):     
+    # def display_statistics(self):     
+    #     try:
+    #         city = self.city_entry.get().strip() if self.city_entry else "Knoxville"
+    #         country = self.country_entry.get().strip() if self.country_entry else "US"
+    #         state = self.state_entry.get().strip() or "TN"  # Or however you're retrieving the state
+            
+    #         # Get statistics using imported function
+    #         stats_text = get_weather_stats(self.db, city, state, country)
+            
+    #         # Update display
+    #         if self.stats_label:
+    #             self.stats_label.config(text=f"📊 Statistics for {city}, {country}:\n\n{stats_text}")
+            
+    #     except Exception as e:
+    #         self.logger.error(f"Error showing statistics: {e}")
+    #         if self.stats_label:
+    #             self.stats_label.config(text=f"Error loading statistics: {str(e)}")
+    
+    # def display_statistics(self) -> None:
+    #     """Display weather statistics based on user input fields."""
+    #     try:
+    #         # Validate that input fields exist
+    #         if not all([self.city_entry, self.state_entry, self.country_entry, self.stats_label]):
+    #             self.logger.error("One or more input widgets are not initialized.")
+    #             if self.stats_label:
+    #                 self.stats_label.config(text="Error: Input fields not initialized.")
+    #             return
+
+    #         # Safely retrieve values from UI
+    #         city = self.city_entry.get().strip() or "Knoxville"
+    #         state = self.state_entry.get().strip() or "TN"
+    #         country = self.country_entry.get().strip() or "US"
+
+    #         # Get statistics using external function
+    #         stats_text = get_weather_stats(self.db, city, state, country)
+
+    #         # Update label or text widget with stats
+    #         self.stats_label.config(text=f"📊 Statistics for {city}, {state}, {country}:\n\n{stats_text}")
+
+    #     except Exception as e:
+    #         self.logger.error(f"Error displaying statistics: {e}")
+    #         if self.stats_label:
+    #             self.stats_label.config(text=f"Error loading statistics: {str(e)}")
+    def display_statistics(self) -> None:
+        """Display weather statistics based on entry fields."""
         try:
-            city = self.city_entry.get().strip() if self.city_entry else "Knoxville"
-            country = self.country_entry.get().strip() if self.country_entry else "US"
+            if not all([
+                self.city_entry, self.state_entry,
+                self.country_entry, self.stats_label
+            ]):
+                self.logger.error("One or more input fields are not initialized.")
+                self.stats_label.config(text="❌ Error: Missing input fields.")
+                return
+
+            city = self.city_entry.get().strip() or "Knoxville"
+            state = self.state_entry.get().strip() or "TN"
+            country = self.country_entry.get().strip() or "US"
+
+            stats_text = get_weather_stats(self.db, city, state, country)
+            self.stats_label.config(
+                text=f"📊 Statistics for {city}, {state}, {country}:\n\n{stats_text}"
+            )
+
+        except Exception as e:
+            self.logger.error(f"Error displaying statistics: {e}")
+            self.stats_label.config(text=f"❌ Error: {str(e)}")
             
-            # Get statistics using imported function
-            stats_text = get_weather_stats(self.db, city, country)
             
-            # Update display
+    def show_statistics(self) -> None:
+        """Show weather statistics in the manual stats display."""
+        try:
+            city = self.get_city_callback()
+            state = "TN"  # Update with dynamic value if needed
+            country = "US"
+
+            stats_text = get_weather_stats(self.db, city, state, country)
+
             if self.stats_label:
-                self.stats_label.config(text=f"📊 Statistics for {city}, {country}:\n\n{stats_text}")
-            
+                self.stats_label.config(
+                    text=f"📊 Statistics for {city}, {state}, {country}:\n\n{stats_text}"
+                )
+
         except Exception as e:
             self.logger.error(f"Error showing statistics: {e}")
             if self.stats_label:
                 self.stats_label.config(text=f"Error loading statistics: {str(e)}")
-    
     def display_current_weather(self, weather_data):
         try:
             # Get temperature 
@@ -340,3 +410,40 @@ class DisplayFeatures:
                 error_frame.grid(row=0, column=i, padx=3, pady=5, sticky="nsew")
                 tk.Label(error_frame, text="Error", bg="#ef4444", fg="white",
                         font=("Segoe UI", 10)).pack(expand=True)
+                
+    # def refresh_all_panels(self) -> None:
+    #     """Refresh all panels that support it"""
+    #     try:
+    #         # Check graphs panel
+    #         if self.graphs_panel is not None:
+    #             if hasattr(self.graphs_panel, 'refresh') and callable(getattr(self.graphs_panel, 'refresh')):
+    #                 self.graphs_panel.refresh()
+    #             else:
+    #                 self.logger.debug("GraphsAndChartsPanel does not have a refresh method")
+            
+    #         # Check trends panel
+    #         if self.trends_panel is not None:
+    #             if hasattr(self.trends_panel, 'refresh') and callable(getattr(self.trends_panel, 'refresh')):
+    #                 self.trends_panel.refresh()
+    #             else:
+    #                 self.logger.debug("TrendPanel does not have a refresh method")
+            
+    #         # Check stats panel
+    #         if self.stats_panel is not None:
+    #             if hasattr(self.stats_panel, 'refresh') and callable(getattr(self.stats_panel, 'refresh')):
+    #                 self.stats_panel.refresh()
+    #             else:
+    #                 self.logger.debug("SimpleStatsPanel does not have a refresh method")
+    #         else:
+    #             # If no stats panel, refresh manual stats display
+    #             self.show_statistics()
+            
+    #         # Check favorites panel
+    #         if self.favorites_panel is not None:
+    #             if hasattr(self.favorites_panel, 'refresh') and callable(getattr(self.favorites_panel, 'refresh')):
+    #                 self.favorites_panel.refresh()
+    #             else:
+    #                 self.logger.debug("FavoriteCityPanel does not have a refresh method")
+                    
+    #     except Exception as e:
+    #         self.logger.error(f"Error refreshing panels: {e}")
