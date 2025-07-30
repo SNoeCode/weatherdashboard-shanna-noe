@@ -3,7 +3,6 @@ import glob
 import hashlib
 
 def hash_file(path):
-    """Generate SHA256 hash of a file’s content."""
     hasher = hashlib.sha256()
     with open(path, "rb") as f:
         buf = f.read()
@@ -11,7 +10,6 @@ def hash_file(path):
     return hasher.hexdigest()
 
 def remove_duplicate_csvs(folder="final/WeatherDashboard-Shanna/data"):
-    """Find and delete duplicate CSV files based on content hash."""
     print("🔎 Checking for duplicate CSVs...")
     seen_hashes = {}
     duplicates = []
@@ -33,7 +31,6 @@ def remove_duplicate_csvs(folder="final/WeatherDashboard-Shanna/data"):
     print(f"✅ Removed {len(duplicates)} duplicate CSV file(s)")
 
 def cleanup(days: int = 15, validate_batch: int = 100):
-    """Run deduplication, pruning, job validation, and CSV duplicate cleanup."""
     print("🧼 Running job cleanup...")
     remove_duplicate_csvs("final/WeatherDashboard-Shanna/data")
     print("✅ Cleanup complete")

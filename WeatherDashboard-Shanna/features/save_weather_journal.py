@@ -1,5 +1,3 @@
-# features/weather_journal.py
-
 from datetime import datetime
 
 def save_journal_entry(city, mood, note, filepath="./data/journal.txt"):

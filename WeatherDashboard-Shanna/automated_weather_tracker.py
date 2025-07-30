@@ -4,6 +4,8 @@ import time
 from typing import Dict, List
 from weather_data_fetcher import WeatherDataFetcher
 from weather_db import WeatherDB
+from datetime import datetime
+from weather_data_fetcher import WeatherDataFetcher
 
 class AutomatedWeatherTracker:
     def __init__(self, collector: WeatherDataFetcher, database: WeatherDB):

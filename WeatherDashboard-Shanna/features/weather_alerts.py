@@ -1,8 +1,9 @@
-
+import os
 import tkinter as tk
 import requests
-
-API_KEY = '6f3796998b81925b7f3b59f7cc33b50e'
+from dotenv import load_dotenv
+load_dotenv()
+API_KEY = os.getenv('WEATHER_API_KEY')
 CITY_ID = '4634946'  
 UNITS = 'imperial'  
 
@@ -18,7 +19,6 @@ def get_weather():
     else:
         weather_label.config(text="Error fetching weather data")
 
-# Tkinter setup
 root = tk.Tk()
 root.title("Weather in Richmond, IN")
 
@@ -28,5 +28,5 @@ weather_label.pack()
 refresh_button = tk.Button(root, text="Refresh", command=get_weather)
 refresh_button.pack()
 
-get_weather()  # Initial fetch
+get_weather()
 root.mainloop()

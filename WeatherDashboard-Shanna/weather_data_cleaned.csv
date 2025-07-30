@@ -1,0 +1,4 @@
+id,city,country,lat,lon,tz,is_active,created_at
+1,Salt Lake City,US,40.7608,-111.891,America/Denver,1,2025-07-29 00:33:33
+2,Knoxville,US,35.9606,-83.9207,America/New_York,1,2025-07-29 00:33:33
+3,Tokyo,JP,35.6828,139.7595,Asia/Tokyo,1,2025-07-29 00:33:33

@@ -4,11 +4,11 @@ import tkinter as tk
 class ThemeManager:
     def __init__(self, root):
         self.root = root
-        self.current_theme = "dark"  # Start with dark theme
+        self.current_theme = "dark"  
         self.style = ttk.Style()
-        self.theme_callbacks = []  # Store callbacks for widgets that need theme updates
+        self.theme_callbacks = [] 
         
-        # Define comprehensive theme configurations
+    
         self.themes = {
             "dark": {
                 "bg_primary": "#1e40af",
@@ -42,19 +42,18 @@ class ThemeManager:
             }
         }
         
-        # Apply initial theme
+        # Apply theme
         self.apply_theme(self.current_theme)
     
     def get_theme_colors(self):
-        """Get current theme color palette"""
+        """Current theme color palette"""
         return self.themes[self.current_theme]
     
     def register_callback(self, callback):
-        """Register a callback function to be called when theme changes"""
+        """Callback function to be called when theme changes"""
         self.theme_callbacks.append(callback)
     
-    def apply_theme(self, mode):
-        """Apply comprehensive theme to all components"""
+    def apply_theme(self, mode):      
         if mode not in self.themes:
             return
             
@@ -146,7 +145,7 @@ class ThemeManager:
                       foreground=[('selected', colors["text_primary"]),
                                 ('active', 'white')])
         
-        # Update current theme
+        # Update theme
         self.current_theme = mode
         
         # Call all registered callbacks
@@ -157,7 +156,6 @@ class ThemeManager:
                 print(f"Theme callback error: {e}")
     
     def toggle_theme(self):
-        """Toggle between light and dark themes"""
         new_mode = "light" if self.current_theme == "dark" else "dark"
         self.apply_theme(new_mode)
         return new_mode
@@ -167,6 +165,5 @@ class ThemeManager:
         return self.current_theme == "dark"
     
     def get_contrast_color(self, base_color):
-        """Get appropriate contrast color for text"""
         colors = self.get_theme_colors()
         return colors["text_primary"] if self.current_theme == "dark" else colors["text_secondary"]

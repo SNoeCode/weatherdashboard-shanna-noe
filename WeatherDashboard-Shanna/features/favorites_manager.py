@@ -2,14 +2,16 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime, timedelta, timezone
-from utils.date_time import format_local_time
+from utils.date_time_utils import format_local_time
 
+        
 class FavoriteCityPanel:
     def __init__(self, parent_tab, tracker, db, logger, cfg):
         self.tracker = tracker
         self.db = db
         self.logger = logger
         self.cfg = cfg
+  
 
         self.frame = ttk.Frame(parent_tab, padding=20)
         self.frame.pack(expand=True, fill='both')
@@ -49,9 +51,9 @@ class FavoriteCityPanel:
                 rate = f"{(success / total * 100):.1f}%" if total else "N/A"
 
                 self.display.insert(tk.END, f"📍 {city}, {country}\n", "title")
-
+                self.display.insert(tk.END, f"  {temp_f:.1f}°F — {desc}\n")
                 if latest:
-                    temp_f = (latest["temp"] * 9/5) + 32
+                    temp_f = latest["temp"]
                     desc = latest["weather_detail"].capitalize()
 
                     try:
@@ -106,3 +108,4 @@ class FavoriteCityPanel:
             self.refresh()
         else:
             messagebox.showwarning("⚠️ Error", "Could not add city to favorites.")
+   

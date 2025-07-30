@@ -1,30 +1,23 @@
-
+import sys
 import requests                 
 import time                    
 import logging                 
 from datetime import datetime, timedelta
 from collections import defaultdict
 from typing import Dict, List,  Optional 
-
-
+from config import Config
+import os
 class WeatherDataFetcher:
-    def __init__(self, api_key: str, base_url: str = "https://api.openweathermap.org/data/2.5"):
-        """
-        Initializes the WeatherDataFetcher with API key and setup.
-
-        Args:
-            api_key (str): Your OpenWeatherMap API key.
-            base_url (str): Base URL for API requests.
-        """
-        self.api_key = api_key                      #API authentication
-        self.base_url = base_url                    #Base URL for endpoint paths
-        self.session = requests.Session()           #Reusable session for performance
-        self.min_request_interval = 1.0             #Prevents over-requesting (rate limiting)
-        self.last_request = 0                       #Tracks time of last call
+    def __init__(self, config: Config, api_key: Optional[str] = None, base_url: Optional[str] = None):
+        self.config = config
+        self.api_key = api_key or config.api_key
+        self.base_url = base_url or config.base_url
+        self.session = requests.Session()
+        self.min_request_interval = 1.0
+        self.last_request = 0
         self.failed_cities = {}
+        self.logger = config.logger or logging.getLogger(__name__)
 
-
-        #Logger setup for error tracking
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
         
@@ -38,34 +31,20 @@ class WeatherDataFetcher:
         return self.failed_cities.get(city.title(), 0) >= threshold
 
 
-    def _delay_between_request(self):
-        """
-        Enforces a minimum wait time between API requests.
-        Prevents spamming the server and handles basic throttling.
-        """
+    def _delay_between_request(self):     
         elapsed_time = time.time() - self.last_request
         if elapsed_time < self.min_request_interval:
             time.sleep(self.min_request_interval - elapsed_time)
         self.last_request = time.time()
 
     def _api_request(self, endpoint: str, params: Dict) -> Optional[Dict]:
-        """
-        Performs a GET request to the specified API endpoint with retry logic.
+        self._delay_between_request() 
 
-        Args:
-            endpoint (str): API route (e.g., "weather", "forecast").
-            params (Dict): Query parameters including location and units.
+        url = f"{self.base_url}/{endpoint}"         
+        params['appid'] = self.api_key              
 
-        Returns:
-            Optional[Dict]: Parsed JSON data or None if request fails.
-        """
-        self._delay_between_request()  #Apply delay before calling
-
-        url = f"{self.base_url}/{endpoint}"         #Build full URL
-        params['appid'] = self.api_key              #Attach API key
-
-        max_retries = 3                             #Retry attempts
-        retry_delays = [1, 2, 4]                     #Progressive backoff delays
+        max_retries = 3                             
+        retry_delays = [1, 2, 4]                
 
         for attempt in range(max_retries):
             try:
@@ -89,37 +68,23 @@ class WeatherDataFetcher:
                 self.logger.warning(f"📡 Request error on attempt {attempt + 1}: {e}")
 
             if attempt < max_retries - 1:
-                time.sleep(retry_delays[attempt])  #Wait before retrying
+                time.sleep(retry_delays[attempt])  
 
         self.logger.error("🚫 Failed to get a valid response after retries")
         return None
-
+      
     def fetch_current_weather(self, city: str, country: Optional[str] = None, units: str = 'metric') -> Optional[Dict]:
-        """
-        Retrieves real-time weather data for a specified city.
-
-        Args:
-            city (str): City name.
-            country (Optional[str]): Optional 2-letter country code.
-            units (str): 'metric' (default), 'imperial', or 'standard'.
-
-        Returns:
-            Optional[Dict]: A structured weather data dictionary.
-        """
         city = city.strip().title()
-        if country:
-            country = country.upper()
-        else:
-            country = ""
-
-
+        country = country.upper() if country else ""
 
         if self.is_fake_or_unresolvable(city):
             self.logger.warning(f"⛔️ Skipping persistently failing city: {city}")
             return None
 
-
-
+        if country == "US":
+            units = "imperial"
+        else:
+            units = "metric"
 
         location = f"{city},{country}" if country else city
         params = {"q": location, "units": units}
@@ -129,31 +94,41 @@ class WeatherDataFetcher:
             return None
 
         try:
+            country_code = raw_data["sys"]["country"]
+            temp = raw_data["main"]["temp"]
+            feels_like = raw_data["main"]["feels_like"]
+
+            temp_unit = "°F" if units == "imperial" else "°C"
+            
+            temp_display = round(temp, 1)
+            feels_display = round(feels_like, 1)
+
             return {
-                "timestamp": datetime.utcfromtimestamp(raw_data["dt"]).isoformat(),      #API timestamp
-                "api_timestamp": datetime.utcnow().isoformat(),                          #Local timestamp
-                "city": raw_data.get("name"),
-                "country": raw_data["sys"]["country"],
-                "temp": raw_data["main"]["temp"],
-                "feels_like": raw_data["main"]["feels_like"],
+                "timestamp": datetime.utcfromtimestamp(raw_data["dt"]).isoformat(),
+                "api_timestamp": datetime.utcnow().isoformat(),
+                "city": raw_data.get("name", city),
+                "country": country_code,
+                "temperature": temp_display,
+                "condition": raw_data["weather"][0].get("description", "Unknown"),
+                "temp": temp_display,
+                "feels_like": feels_display,
+                "temp_unit": temp_unit, 
                 "humidity": raw_data["main"]["humidity"],
                 "pressure": raw_data["main"]["pressure"],
-                "weather_summary": raw_data["weather"][0]["main"],                      
+                "weather_summary": raw_data["weather"][0]["main"],
                 "weather_detail": raw_data["weather"][0].get("description", "Unknown"),
                 "wind_speed": raw_data["wind"].get("speed"),
                 "wind_direction": raw_data["wind"].get("deg"),
                 "cloudiness": raw_data["clouds"].get("all"),
-                "visibility": raw_data.get("visibility")
+                "visibility": raw_data.get("visibility"),
+                "units": units 
             }
         except (KeyError, IndexError, TypeError) as err:
             self.logger.error(f"🧨 Data parsing error for {location}: {err}")
             return None
-        
+   
         
     def fetch_five_day_forecast(self, city: str, country: Optional[str] = None, units: str = "metric") -> Optional[Dict]:
-        """
-        Retrieves a 5-day forecast in 3-hour intervals using city and country.
-        """
         location = f"{city},{country}" if country else city
         params = {"q": location, "units": units}
 
@@ -164,14 +139,83 @@ class WeatherDataFetcher:
             self.logger.warning(f"❌ No forecast returned for: {location}")
         return forecast
     
+    def fetch_recent(self, city, country, hours=3):
+        forecast = self.fetch_five_day_forecast(city, country)
+        if not forecast:
+            return None
+
+        now = datetime.utcnow()
+        window = timedelta(hours=hours)
+
+        recent_entries = [
+            entry for entry in forecast["list"]
+            if abs(datetime.strptime(entry["dt_txt"], "%Y-%m-%d %H:%M:%S") - now) <= window
+        ]
+
+        return recent_entries if recent_entries else None
+
+    def fetch_hourly_weather(self, city: str, state: str, country: str) -> Optional[Dict]:
+        endpoint = "weather/hourly"  # or your provider-specific endpoint
+        params = {"q": f"{city},{state},{country}", "units": "imperial"}
+        params['appid'] = "67e0f6de342521f8dfbd7a7c74423ca7"
+        response = self._api_request(endpoint, params)
+        
+        if not response:
+            return None
+
+        try:
+            return {
+                "Current Time": datetime.now().strftime("%m-%d-%y %H:%M:%S"),
+                "City": city,
+                "State": state,
+                "Country": country,
+                "Temperature": response["temp"],
+                "Feels Like": response["feels_like"],
+                "Humidity": response["humidity"],
+                "Precipitation": response.get("precip", 0),
+                "Pressure": response["pressure"],
+                "Wind Speed": response["wind_speed"],
+                "Wind Direction": response["wind_deg"],
+                "Visibility": response["visibility"],
+                "Sunrise": response["sunrise"],
+                "Sunset": response["sunset"]
+            }
+        except Exception as e:
+            self.logger.error(f"Error parsing hourly weather: {e}")
+            return None
+
+    def fetch_historical_weather(self, city: str, state: str, country: str) -> List[Dict]:
+        endpoint = "weather/historical"
+        params = {"q": f"{city},{state},{country}", "units": "imperial"}
+        params['appid'] = os.getenv("HIST_DATA_API_KEY")  # you'll plug this into .env
+
+        response = self._api_request(endpoint, params)
+        if not response or "history" not in response:
+            return []
+
+        readings = []
+        for entry in response["history"]:
+            readings.append({
+                "Current Time": datetime.strptime(entry["timestamp"], "%Y-%m-%dT%H:%M:%S").strftime("%m-%d-%y %H:%M:%S"),
+                "City": city,
+                "State": state,
+                "Country": country,
+                "Temperature": entry["temp"],
+                "Feels Like": entry["feels_like"],
+                "Humidity": entry["humidity"],
+                "Precipitation": entry.get("precip", 0),
+                "Pressure": entry["pressure"],
+                "Wind Speed": entry["wind_speed"],
+                "Wind Direction": entry["wind_deg"],
+                "Visibility": entry["visibility"],
+                "Sunrise": entry["sunrise"],
+                "Sunset": entry["sunset"]
+            })
+        return readings
 
 
 
-    def extract_five_day_summary(self, forecast: Dict) -> List[Dict]:
-        """
-        Extracts 5 daily forecast summaries from 3-hour interval forecast data.
-        Prefers 12:00 PM data point for each day if available.
-        """
+    def extract_five_day_summary(self, forecast: Dict) -> List[Dict]:      
         forecast_list = forecast.get("list", [])
         daily_data = defaultdict(list)
 
@@ -184,10 +228,9 @@ class WeatherDataFetcher:
 
         five_day_forecasts = []
 
-        # Get forecasts for the next 5 distinct days
+        # Get forecasts for the next 5 
         for date in sorted(daily_data.keys())[:5]:
-            entries = daily_data[date]
-            # Prefer forecast at 12:00:00
+            entries = daily_data[date]      
             preferred_entry = next(
                 (e for e in entries if "12:00:00" in e["dt_txt"]),
                 entries[len(entries)//2]  # fallback to middle of the day

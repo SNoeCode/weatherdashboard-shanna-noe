@@ -21,6 +21,7 @@ class JournalPanel:
 
         ttk.Button(self.frame, text="Save Entry", command=self.save_entry).pack(pady=15)
 
+                       
     def save_entry(self):
         mood = self.mood_entry.get().strip()
         note = self.note_entry.get().strip()
@@ -33,3 +34,4 @@ class JournalPanel:
             self.note_entry.delete(0, tk.END)
         else:
             messagebox.showwarning("⚠️ Missing Info", "Fill out all fields before saving.")
+        

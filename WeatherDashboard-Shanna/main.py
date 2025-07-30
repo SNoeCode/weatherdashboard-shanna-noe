@@ -7,63 +7,72 @@ from automated_weather_tracker import AutomatedWeatherTracker
 from weather_display_ui import WeatherAppGUI
 from config import Config
 import threading
+import os
+import logging
+import threading
 
-
+from dotenv import load_dotenv
 load_dotenv()
 
-if __name__ == "__main__":
+def initialize_system():
     api_key = os.getenv("WEATHER_API_KEY")
     if not api_key:
         raise ValueError("WEATHER_API_KEY not set in .env")
 
     config = Config.load_from_env()
+    fetcher = WeatherDataFetcher(config)
+    db = WeatherDB(fetcher)
 
-    db = WeatherDB()
-    db.update_location("Salt Lake City", "US", latitude=40.7608, longitude=-111.8910, timezone="America/Denver")
-    db.update_location("Knoxville", "US", latitude=35.9606, longitude=-83.9207, timezone="America/New_York")
-    db.update_location("Tokyo", "JP", latitude=35.6828, longitude=139.7595, timezone="Asia/Tokyo")
+    # Add predefined locations
+    locations = [
+        ("Salt Lake City", "US", 40.7608, -111.8910, "America/Denver"),
+        ("Knoxville", "US", 35.9606, -83.9207, "America/New_York"),
+        ("Tokyo", "JP", 35.6828, 139.7595, "Asia/Tokyo"),
+    ]
+
+    for city, country, lat, lon, tz in locations:
+        db.update_location(city, country, latitude=lat, longitude=lon, timezone=tz)
+
     db.export_locations_to_csv()
 
+    # Show error log preview
     print("\n🔍 Recent Weather Errors:")
-    errors = db.get_error_log(limit=10)
-    for err in errors:
+    for err in db.get_error_log(limit=10):
         print(f"- {err['timestamp']} | {err['city']}, {err['country']} | {err['status']} → {err.get('error', 'N/A')}")
 
-    fetcher = WeatherDataFetcher(api_key=config.api_key, base_url=config.base_url)
-    # fetcher = WeatherDataFetcher(api_key)
+    return config, fetcher, db
+
+def run_dashboard(config, fetcher, db):
     tracker = AutomatedWeatherTracker(collector=fetcher, database=db)
+    
+    for city in db.get_all_locations():
+        tracker.add_location(city["city"], city["country"])
 
-    tracker.add_location("Salt Lake City", "US")
-    tracker.add_location("Knoxville", "US")
-    tracker.add_location("Tokyo", "JP")
-
-
-
-    # tracker.start_scheduled_collection(interval_minutes=30)
     threading.Thread(target=tracker.start_scheduled_collection, args=(30,), daemon=True).start()
     tracker.collect_all_locations()
-    city = "Knoxville"
-    country = "US"
-    forecast_data = fetcher.fetch_five_day_forecast(city, country)
 
+    # Show forecast preview for Knoxville
+    city, country = "Knoxville", "US"
+    forecast_data = fetcher.fetch_five_day_forecast(city, country)
+   
     if forecast_data:
         five_day_summary = fetcher.extract_five_day_summary(forecast_data)
         print(f"\n📅 5-Day Forecast for {city}, {country}:")
         for entry in five_day_summary:
-            dt_txt = entry["dt_txt"]
-            temp = entry["main"]["temp"]
-            description = entry["weather"][0]["description"]
-            print(f"{dt_txt} | {temp:.1f}°C | {description}")
+            print(f"{entry['dt_txt']} | {entry['main']['temp']:.1f}°C | {entry['weather'][0]['description']}")
     else:
         print("❌ Could not fetch forecast data.")
 
+    # Launch GUI
     print("✅ Launching Weather Dashboard GUI...")
-    config = Config.load_from_env()
     logger = logging.getLogger("WeatherDashboard")
-    app = WeatherAppGUI(fetcher=fetcher, db=db, tracker=tracker, logger=logger)
-    print("✅ Launching Weather Dashboard GUI...")
+    app = WeatherAppGUI(fetcher=fetcher, db=db, tracker=tracker, logger=logger, cfg=config)
+
     try:
         app.run()
     except Exception as e:
         print(f"❌ GUI failed to launch: {e}")
 
+if __name__ == "__main__":
+    config, fetcher, db = initialize_system()
+    run_dashboard(config, fetcher, db)

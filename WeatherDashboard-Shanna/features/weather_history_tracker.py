@@ -6,41 +6,30 @@ from matplotlib.figure import Figure
 import numpy as np
 from datetime import datetime, timedelta
 import sqlite3
+import csv
 
-
-class HistoryTracker:
-    """Enhanced history tracker with temperature graphs and better UI"""
-    
+class HistoryTracker:  
     def __init__(self, parent_tab, db):
         self.db = db
-        
-        # Configure styles
+ 
         self.configure_styles()
-        
         # Main container
         self.main_container = tk.Frame(parent_tab, bg='#f0f2f5')
         self.main_container.pack(expand=True, fill='both')
-        
-        # Create header
-        self.create_header()
-        
-        # Create control panel
-        self.create_control_panel()
-        
-        # Create graph section
-        self.create_graph_section()
-        
-        # Create data table section
-        self.create_data_table()
-        
-        # Create statistics section
+        self.create_header()        
+       
+        self.create_control_panel()        
+      
+        self.create_graph_section()        
+       
+        self.create_data_table()       
+
         self.create_statistics_section()
         
         # Load initial data
         self.load_data()
     
     def configure_styles(self):
-        """Configure modern UI styles"""
         style = ttk.Style()
         
         # Configure styles
@@ -62,7 +51,6 @@ class HistoryTracker:
         style.configure("Treeview.Heading", font=("Segoe UI", 10, "bold"))
     
     def create_header(self):
-        """Create modern header section"""
         header_frame = tk.Frame(self.main_container, bg='#34495e', height=80)
         header_frame.pack(fill='x', pady=(0, 20))
         header_frame.pack_propagate(False)
@@ -160,9 +148,8 @@ class HistoryTracker:
                               cursor='hand2',
                               command=self.export_data)
         export_btn.pack(side='right', padx=(0, 10), pady=(20, 0))
-    
+        
     def create_graph_section(self):
-        """Create temperature graph section"""
         graph_frame = tk.Frame(self.main_container, bg='#ffffff', relief='flat', bd=1)
         graph_frame.pack(fill='both', expand=True, padx=20, pady=(0, 20))
         
@@ -183,16 +170,13 @@ class HistoryTracker:
         self.fig = Figure(figsize=(12, 6), dpi=100, facecolor='white')
         self.ax = self.fig.add_subplot(111)
         
-        # Create canvas
         self.canvas = FigureCanvasTkAgg(self.fig, self.graph_container)
         self.canvas.get_tk_widget().pack(fill='both', expand=True)
     
     def create_data_table(self):
-        """Create data table section"""
         table_frame = tk.Frame(self.main_container, bg='#ffffff', relief='flat', bd=1)
-        table_frame.pack(fill='x', padx=20, pady=(0, 20))
-        
-        # Table header
+        table_frame.pack(fill='x', padx=20, pady=(0, 20))        
+     
         table_header = tk.Frame(table_frame, bg='#ffffff')
         table_header.pack(fill='x', padx=20, pady=(15, 10))
         
@@ -226,7 +210,6 @@ class HistoryTracker:
         self.tree.column("Humidity", width=100)
         self.tree.column("Wind Speed", width=100)
         
-        # Add scrollbar
         scrollbar = ttk.Scrollbar(table_container, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=scrollbar.set)
         
@@ -239,7 +222,6 @@ class HistoryTracker:
         stats_frame = tk.Frame(self.main_container, bg='#ffffff', relief='flat', bd=1)
         stats_frame.pack(fill='x', padx=20, pady=(0, 20))
         
-        # Stats header
         stats_header = tk.Frame(stats_frame, bg='#ffffff')
         stats_header.pack(fill='x', padx=20, pady=(15, 10))
         
@@ -252,16 +234,13 @@ class HistoryTracker:
         self.stats_container = tk.Frame(stats_frame, bg='#ffffff')
         self.stats_container.pack(fill='x', padx=20, pady=(0, 20))
         
-        # Create stat cards
         self.create_stat_cards()
     
     def create_stat_cards(self):
-        """Create statistics cards"""
         # Clear existing cards
         for widget in self.stats_container.winfo_children():
             widget.destroy()
         
-        # Statistics data (placeholder)
         stats_data = [
             ("🌡️ Average Temp", "72.5°F", "#e74c3c"),
             ("⬆️ Highest Temp", "89.2°F", "#f39c12"),
@@ -296,7 +275,6 @@ class HistoryTracker:
             desc_label.pack()
     
     def load_data(self):
-        """Load weather data from database"""
         try:
             # Get time range
             time_range = self.time_range_var.get()
@@ -311,28 +289,23 @@ class HistoryTracker:
                 start_date = end_date - timedelta(days=30)
             elif time_range == "90 days":
                 start_date = end_date - timedelta(days=90)
-            else:  # All time
+            else:  
                 start_date = datetime(2020, 1, 1)
             
             # Fetch data from database
             data = self.fetch_weather_data(start_date, end_date)
-            
-            # Update graph
-            self.update_graph(data)
-            
-            # Update table
-            self.update_table(data)
-            
-            # Update statistics
+                        
+            self.update_graph(data)            
+         
+            self.update_table(data)            
+           
             self.update_statistics(data)
             
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load data: {str(e)}")
     
-    def fetch_weather_data(self, start_date, end_date):
-        """Fetch weather data from database"""
+    def fetch_weather_data(self, start_date, end_date):      
         try:
-            # Connect to database
             conn = sqlite3.connect(self.db.db_path)
             cursor = conn.cursor()
             
@@ -353,11 +326,10 @@ class HistoryTracker:
             
         except Exception as e:
             print(f"Database error: {e}")
-            # Return sample data if database fails
             return self.generate_sample_data()
     
     def generate_sample_data(self):
-        """Generate sample data for demonstration"""
+       
         data = []
         base_date = datetime.now() - timedelta(days=7)
         
@@ -373,20 +345,18 @@ class HistoryTracker:
         return data
     
     def update_graph(self, data):
-        """Update temperature graph"""
         if not data:
             return
         
         # Clear previous plot
         self.ax.clear()
         
-        # Extract data
         timestamps = [datetime.fromisoformat(row[0]) for row in data]
         temperatures = [float(row[1]) for row in data]
         
         # Convert temperature if needed
         if self.temp_unit_var.get() == "Fahrenheit":
-            temperatures = [(temp * 9/5) + 32 for temp in temperatures]
+            temperatures = [(temp) for temp in temperatures]
             unit = "°F"
         else:
             unit = "°C"
@@ -425,14 +395,12 @@ class HistoryTracker:
                         "--", color='#e74c3c', alpha=0.8, linewidth=2, label='Trend')
             self.ax.legend()
         
-        # Tight layout
-        self.fig.tight_layout()
+            self.fig.tight_layout()
         
         # Refresh canvas
         self.canvas.draw()
     
     def update_table(self, data):
-        """Update data table"""
         # Clear existing items
         for item in self.tree.get_children():
             self.tree.delete(item)
@@ -443,10 +411,10 @@ class HistoryTracker:
             date_str = timestamp.strftime("%Y-%m-%d")
             time_str = timestamp.strftime("%H:%M")
             
-            # Format temperature
+       
             temp = float(row[1])
             if self.temp_unit_var.get() == "Fahrenheit":
-                temp = (temp * 9/5) + 32
+                temp = (temp)
                 temp_str = f"{temp:.1f}°F"
             else:
                 temp_str = f"{temp:.1f}°C"
@@ -458,7 +426,6 @@ class HistoryTracker:
             self.tree.insert("", "end", values=(date_str, time_str, temp_str, condition, humidity, wind_speed))
     
     def update_statistics(self, data):
-        """Update statistics cards"""
         if not data:
             return
         
@@ -466,7 +433,7 @@ class HistoryTracker:
         temperatures = [float(row[1]) for row in data]
         
         if self.temp_unit_var.get() == "Fahrenheit":
-            temperatures = [(temp * 9/5) + 32 for temp in temperatures]
+            temperatures = [(temp) for temp in temperatures]
             unit = "°F"
         else:
             unit = "°C"
@@ -489,7 +456,7 @@ class HistoryTracker:
             ("📅 Date Range", self.time_range_var.get(), "#9b59b6"),
             ("🌤️ Most Common", most_common, "#f1c40f")
         ]
-        
+ 
         # Clear and recreate cards
         for widget in self.stats_container.winfo_children():
             widget.destroy()
@@ -499,7 +466,6 @@ class HistoryTracker:
             card = tk.Frame(self.stats_container, bg=color, relief='flat', bd=1)
             card.grid(row=i//3, column=i%3, padx=10, pady=10, sticky='ew')
             
-            # Configure grid weights
             self.stats_container.grid_columnconfigure(i%3, weight=1)
             
             # Card content
@@ -531,7 +497,6 @@ class HistoryTracker:
         self.load_data()
     
     def export_data(self):
-        """Export data to CSV"""
         try:
             from tkinter import filedialog
             
@@ -558,8 +523,6 @@ class HistoryTracker:
                 
                 data = self.fetch_weather_data(start_date, end_date)
                 
-                # Write to CSV
-                import csv
                 with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
                     writer = csv.writer(csvfile)
                     writer.writerow(['Timestamp', 'Temperature', 'Condition', 'Humidity', 'Wind Speed'])

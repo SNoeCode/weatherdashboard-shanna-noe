@@ -5,6 +5,8 @@ from PIL import Image, ImageTk
 from config import Config
 config = Config.load_from_env()
 from typing import cast
+
+from weather_db import WeatherDB
 icon_map = {
     "Clear": "icons/icons8-sun-50.png",
     "Rain": "icons/icons8-rain-50.png",
@@ -15,8 +17,8 @@ icon_map = {
     "Mist": "icons/weather_icons_dovora_interactive/PNG/128/mist.png"
 }
 
+
 def fade_in(widget, delay=30, steps=10):
-    """Gradually changes widget foreground color from light gray to black."""
     def step(opacity):
         level = int(255 * opacity)
         color = f"#{level:02x}{level:02x}{level:02x}"
@@ -33,11 +35,10 @@ def display_weather_with_icon(weather_frame, weather_data, fetcher, render_forec
     for widget in weather_frame.winfo_children():
         widget.destroy()
 
-    #Convert metric to Fahrenheit
-    temp = (weather_data["temp"] * 9 / 5) + 32 if weather_data["country"] == "US" else weather_data["temp"]
+   
+    temp = (weather_data["temp"]) if weather_data["country"] == "US" else weather_data["temp"]
     unit = "°F" if weather_data["country"] == "US" else "°C"
 
-    #Fetch weather icon path
     weather_main = weather_data.get("weather_summary", "Unknown")
     icon_path = get_icon_path(weather_main)
 
@@ -50,7 +51,6 @@ def display_weather_with_icon(weather_frame, weather_data, fetcher, render_forec
     except Exception as e:
         print(f"[Icon Error] {e}")
 
-    #Temperature label
     temp_label = ttk.Label(weather_frame, text=f"{temp:.1f}{unit}", font=("Segoe UI", 24, "bold"), foreground="#888")
     temp_label.pack(anchor="center")
     fade_in(temp_label)
@@ -61,7 +61,6 @@ def display_weather_with_icon(weather_frame, weather_data, fetcher, render_forec
     desc_label.pack(anchor="center")
     fade_in(desc_label)
 
-    #Forecast render
     forecast = fetcher.fetch_five_day_forecast(weather_data["city"], weather_data["country"])
     if forecast:
        render_forecast(weather_frame, forecast["list"], weather_data["country"])
