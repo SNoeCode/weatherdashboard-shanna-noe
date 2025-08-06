@@ -1,0 +1,7 @@
+matplotlib
+requests
+pandas
+schedule
+python-dotenv
+Pillow
+imagehash
