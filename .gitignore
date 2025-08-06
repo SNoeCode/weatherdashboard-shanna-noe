@@ -1,0 +1,51 @@
+# 🐍 Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.pdb
+*.egg
+*.egg-info/
+dist/
+build/
+*.log
+
+# 📦 Virtual Environment
+.venv/
+env/
+ENV/
+venv/
+*.env
+
+# 🧪 Testing & Coverage
+.coverage
+htmlcov/
+.tox/
+.nox/
+.pytest_cache/
+.cache/
+
+# 📚 Jupyter Notebooks
+.ipynb_checkpoints
+
+# 🧰 IDEs & Editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# 📄 OS & Misc
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 🔐 Secrets
+*.pem
+*.key
+*.crt
+*.db
+*.sqlite3
+*.config
+*.cfg
+*.ini
