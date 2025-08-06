@@ -54,7 +54,31 @@ weatherdashboard-shanna-noe/
     └── 📄 weekly_reflections.md        # Development progress tracking
 ```
 
-## ✨ Features Implemented
+## 📱 How to Use the App
+
+### Main Dashboard
+- **Current Weather:** View real-time conditions with weather icons
+- **Forecast:** See upcoming weather predictions
+- **Location Search:** Add cities to your favorites list
+- **Export Data:** Save weather history to CSV files
+
+### Navigate Between Tabs
+- **🏠 Home:** Current weather and today's forecast
+- **⭐ Favorites:** Your saved locations and comparisons
+- **📊 Statistics:** Historical trends and data analysis
+- **🎯 Predictions:** Tomorrow's weather guesses with accuracy tracking
+
+### Play the Climate Quiz
+1. Click **"Climate Quiz"** button from any tab
+2. **Game Rules:** Guess the city based on weather clues
+3. **5 Questions:** Each round pulls data from 2 random datasets
+4. **Scoring:** Get feedback and see your geography knowledge improve!
+
+### Key Features to Try
+- **Weather Icons:** Notice how icons change with conditions
+- **Tomorrow's Guess:** Check prediction accuracy over time
+- **Data Export:** Download your weather history
+- **Multiple Locations:** Compare weather across different cities
 
 ### 🌟 Feature 1: Simple Statistics (⭐ Complete)
 - **File Handling:** CSV/JSON/TXT data parsing and processing
@@ -133,9 +157,15 @@ graph TD
 - **Testing:** unittest, pytest
 - **Version Control:** Git/GitHub
 
-## 🚀 Installation & Setup
+## 🚀 Quick Start
 
-1. **Clone the repository:**
+### Prerequisites
+- Python 3.8 or higher
+- Internet connection for live weather data
+- OpenWeatherMap API key (optional - app includes mock data)
+
+### Installation & Setup
+1. **Clone and navigate:**
    ```bash
    git clone https://github.com/SNoeCode/weatherdashboard-shanna-noe.git
    cd weatherdashboard-shanna-noe
@@ -146,15 +176,18 @@ graph TD
    pip install -r requirements.txt
    ```
 
-3. **Set up API credentials:**
-   - Obtain API key from OpenWeatherMap
-   - Create `.env` file with your API key
-   - Update configuration settings
-
-4. **Run the application:**
+3. **Run the application:**
    ```bash
    python main.py
    ```
+   
+4. **Optional - Add your API key:**
+   - Get free API key from [OpenWeatherMap](https://openweathermap.org/api)
+   - Create `.env` file: `API_KEY=your_key_here`
+   - Restart app for live data
+
+### Test the App Immediately
+The app works out-of-the-box with sample data, so you can explore all features without any setup!
 
 ## 📈 Development Timeline
 
