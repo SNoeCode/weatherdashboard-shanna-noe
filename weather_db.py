@@ -246,6 +246,41 @@ class WeatherDB:
                 int(kwargs.get('is_active', True))
             ))
     
+    def fetch_all_for_city(self, city: str, country: str, limit: int = 100) -> List[Dict]:
+        """Fetch all available readings for a specific city"""
+        query = """
+        SELECT timestamp, temp, temp_min, temp_max, humidity, pressure, weather_summary, weather_detail
+        FROM readings 
+        WHERE city = ? AND country = ?
+        ORDER BY timestamp DESC
+        LIMIT ?
+        """
+        
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.execute(query, (city, country, limit))
+                results = cursor.fetchall()
+                
+                readings = []
+                for row in results:
+                    readings.append({
+                        'timestamp': row[0],  
+                        'temp': row[1],
+                        'temp_min': row[2],
+                        'temp_max': row[3],
+                        'humidity': row[4],
+                        'pressure': row[5],
+                        'weather_summary': row[6],
+                        'weather_detail': row[7]
+                    })
+                
+                return readings
+                
+        except Exception as e:
+            self.logger.error(f"Error fetching all readings for city: {e}")
+            return []
+    
+    
     def get_all_readings(self) -> List[Dict]:
         with self.get_connection() as conn:
             rows = conn.execute("SELECT * FROM readings ORDER BY timestamp DESC").fetchall()

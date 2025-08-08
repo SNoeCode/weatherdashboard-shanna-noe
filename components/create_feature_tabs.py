@@ -12,6 +12,8 @@ from features.graphs_and_charts import GraphsAndChartsPanel
 from services.weather_stats import get_weather_stats
 from features.insights import InsightsDashboardTab
 
+
+
 class CreateFeatureTabs:
     def __init__(self, parent, fetcher, db, tracker, logger, theme_manager, cfg, get_city_callback, export_data_callback):
         self.parent = parent
@@ -138,6 +140,7 @@ class CreateFeatureTabs:
             self.logger.error(f"Error refreshing panels: {e}")
 
     def update_weather_data(self, weather_data: Any) -> None:
+        """Update weather data in all relevant panels"""
         try:           
             if self.insights_panel:
                 if hasattr(self.insights_panel, 'activity_panel') and self.insights_panel.activity_panel:
@@ -155,6 +158,7 @@ class CreateFeatureTabs:
             self.logger.error(f"Error updating weather data in panels: {e}")
 
     def safe_panel_method_call(self, panel: Any, method_name: str, *args, **kwargs) -> bool:
+        """Safely call a method on a panel if it exists"""
         try:
             if panel is not None and hasattr(panel, method_name):
                 method = getattr(panel, method_name)
@@ -169,4 +173,108 @@ class CreateFeatureTabs:
         except Exception as e:
             self.logger.error(f"Error calling {method_name} on {type(panel).__name__ if panel else 'None'}: {e}")
             return False 
- 
+    
+    def update_tomorrow_prediction_location(self, city, country):
+        """Update tomorrow's prediction for new location - THIS IS THE KEY METHOD"""
+        try:
+            self.logger.info(f"Updating tomorrow prediction location to {city}, {country}")
+            
+            # Try multiple possible locations for the prediction panel
+            prediction_updated = False
+            
+            # Check if it's in the guess panel
+            if self.guess_panel and hasattr(self.guess_panel, 'update_location'):
+                self.guess_panel.update_location(city, country)
+                prediction_updated = True
+                self.logger.info("Updated prediction via guess_panel")
+            
+            # Check if the prediction is in insights panel
+            if self.insights_panel:
+                # Try different possible nested structures
+                if hasattr(self.insights_panel, 'guess_panel') and self.insights_panel.guess_panel:
+                    if hasattr(self.insights_panel.guess_panel, 'update_location'):
+                        self.insights_panel.guess_panel.update_location(city, country)
+                        prediction_updated = True
+                        self.logger.info("Updated prediction via insights_panel.guess_panel")
+                
+                # Try prediction_panel
+                if hasattr(self.insights_panel, 'prediction_panel') and self.insights_panel.prediction_panel:
+                    if hasattr(self.insights_panel.prediction_panel, 'update_location'):
+                        self.insights_panel.prediction_panel.update_location(city, country)
+                        prediction_updated = True
+                        self.logger.info("Updated prediction via insights_panel.prediction_panel")
+                
+                # Try tomorrow_panel
+                if hasattr(self.insights_panel, 'tomorrow_panel') and self.insights_panel.tomorrow_panel:
+                    if hasattr(self.insights_panel.tomorrow_panel, 'update_location'):
+                        self.insights_panel.tomorrow_panel.update_location(city, country)
+                        prediction_updated = True
+                        self.logger.info("Updated prediction via insights_panel.tomorrow_panel")
+                
+                # Try activity_panel (if it has prediction features)
+                if hasattr(self.insights_panel, 'activity_panel') and self.insights_panel.activity_panel:
+                    if hasattr(self.insights_panel.activity_panel, 'update_location'):
+                        self.insights_panel.activity_panel.update_location(city, country)
+                        prediction_updated = True
+                        self.logger.info("Updated prediction via insights_panel.activity_panel")
+            
+            # Generic approach: try to update any panel that has update_location method
+            panels_to_check = [
+                ('graphs_panel', self.graphs_panel),
+                ('compare_panel', self.compare_panel),
+                ('insights_panel', self.insights_panel),
+                ('guess_panel', self.guess_panel)
+            ]
+            
+            for panel_name, panel in panels_to_check:
+                if panel and hasattr(panel, 'update_location'):
+                    try:
+                        panel.update_location(city, country)
+                        prediction_updated = True
+                        self.logger.info(f"Updated prediction via {panel_name}")
+                    except Exception as panel_error:
+                        self.logger.warning(f"Failed to update {panel_name}: {panel_error}")
+            
+            # Also try to refresh any prediction-related content
+            self.safe_panel_method_call(self.insights_panel, 'refresh_predictions', city, country)
+            
+            if prediction_updated:
+                self.logger.info(f"Successfully updated tomorrow prediction location to {city}, {country}")
+            else:
+                self.logger.warning(f"Could not find prediction panel to update location to {city}, {country}")
+                
+        except Exception as e:
+            self.logger.error(f"Error updating tomorrow prediction location: {e}")
+    
+    def update_location_for_all_panels(self, city, country):
+        """Update location for all panels that support it"""
+        try:
+            self.logger.info(f"Updating all panels with new location: {city}, {country}")
+            
+            # List of panels and methods to try
+            update_methods = [
+                ('update_location', [city, country]),
+                ('refresh_for_location', [city, country]),
+                ('set_location', [city, country]),
+                ('change_location', [city, country])
+            ]
+            
+            panels = [
+                ('graphs_panel', self.graphs_panel),
+                ('compare_panel', self.compare_panel),
+                ('insights_panel', self.insights_panel),
+                ('guess_panel', self.guess_panel)
+            ]
+            
+            for panel_name, panel in panels:
+                if panel:
+                    for method_name, args in update_methods:
+                        if self.safe_panel_method_call(panel, method_name, *args):
+                            self.logger.info(f"Updated {panel_name} with {method_name}")
+                            break
+            
+            # Also update the tomorrow prediction specifically
+            self.update_tomorrow_prediction_location(city, country)
+            
+        except Exception as e:
+            self.logger.error(f"Error updating location for all panels: {e}")

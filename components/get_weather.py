@@ -17,6 +17,8 @@ class GetWeather:
         self.root = root
         self.current_weather_data = None
         
+        self.widgets = {}
+        self.display_component = None
         # UI widget references - these will be set by the main app
         self.city_entry = None
         self.country_entry = None
@@ -76,7 +78,6 @@ class GetWeather:
             self.ui_callbacks[event_type].append(callback)
     
     def _trigger_callbacks(self, event_type, *args, **kwargs):
-        """Trigger all callbacks for a specific event type"""
         for callback in self.ui_callbacks.get(event_type, []):
             try:
                 if self.root:
@@ -86,20 +87,21 @@ class GetWeather:
             except Exception as e:
                 self.logger.error(f"Callback error for {event_type}: {e}")
 
-    def get_weather_threaded(self, city=None, country=None):
-        """Start weather fetching in a separate thread"""
+    def get_weather_threaded(self, city=None, country=None):    
         threading.Thread(target=self.get_weather, args=(city, country), daemon=True).start()
-
-    def get_weather(self, city=None, country=None):
-        """Fetch weather data and update all dashboard components"""
-        try:
-            # Get city and country from parameters or UI widgets
+    
+    
+    def set_widgets(self, widgets_dict):
+        """Set all widget references at once"""
+        self.widgets.update(widgets_dict)
+   
+    def get_weather(self, city=None, country=None):        
+        try:           
             if city is None:
-                city = self.city_entry.get().strip() if self.city_entry else "Knoxville"
+                city = self.widgets.get('city_entry').get().strip() if self.widgets.get('city_entry') else "Knoxville"
             if country is None:
-                country = self.country_entry.get().strip() if self.country_entry else "US"
-            
-            # Determine units based on country
+                country = self.widgets.get('country_entry').get().strip() if self.widgets.get('country_entry') else "US"
+                    
             units = "imperial" if country.upper() == "US" else "metric"
             
             self.logger.info(f"Fetching weather for {city}, {country} with units: {units}")
@@ -107,11 +109,11 @@ class GetWeather:
             # Trigger loading callbacks
             self._trigger_callbacks('on_weather_start', city, country)
             
-            # Update UI to show loading (if widgets are available)
-            if self.root and self.temp_label:
-                self.root.after(0, lambda: self.temp_label.config(text="Loading..."))
-            if self.root and self.city_label:
-                self.root.after(0, lambda: self.city_label.config(text=f"Loading {city}, {country}..."))
+            # Update UI to show loading
+            if self.root and self.widgets.get('temp_label'):
+                self.root.after(0, lambda: self.widgets['temp_label'].config(text="Loading..."))
+            if self.root and self.widgets.get('city_label'):
+                self.root.after(0, lambda: self.widgets['city_label'].config(text=f"Loading {city}, {country}..."))
             
             # Fetch current weather with retry logic
             current_weather = None
@@ -134,15 +136,28 @@ class GetWeather:
                 self.current_weather_data = current_weather
                 self.logger.info(f"Current weather data: {current_weather}")
                 
-                # Try to insert into database
+                # Insert into database FIRST - this is critical for the graph
                 try:
                     self.db.insert_reading(current_weather)
                     self.logger.info("Weather data inserted into database")
                 except Exception as db_error:
                     self.logger.error(f"Database insert failed: {db_error}")
                 
-                # Trigger success callbacks FIRST
+                # Trigger success callbacks BEFORE graph update
                 self._trigger_callbacks('on_weather_success', current_weather, units)
+                
+                # ⭐ CRITICAL FIX: Update temperature graph with longer delay to ensure DB insert completes
+                if self.root and self.widgets.get('graph_container'):
+                    self.logger.info(f"Scheduling temperature graph update for {city}, {country}")
+                    # Use longer delay and ensure city/country are captured in closure
+                    def update_graph():
+                        try:
+                            self.logger.info(f"Executing temperature graph update for {city}, {country}")
+                            self.update_temperature_graph(city, country)
+                        except Exception as e:
+                            self.logger.error(f"Graph update error: {e}")
+                    
+                    self.root.after(500, update_graph)  # Increased delay from 100ms to 500ms
                 
                 # Fetch and display forecast
                 try:
@@ -168,26 +183,22 @@ class GetWeather:
                 
                 if self.root:
                     self.root.after(0, lambda: messagebox.showerror("Weather Fetch Error", error_msg))
-                    # Reset UI
-                    if self.temp_label:
-                        self.root.after(0, lambda: self.temp_label.config(text="--°F"))
-                    if self.city_label:
-                        self.root.after(0, lambda: self.city_label.config(text="Enter a city"))
                     
         except Exception as e:
             self.logger.error(f"Critical weather fetch error: {e}")
-            error_msg = f"Weather service unavailable: {str(e)}\n\nPlease check your internet connection and try again."
-            
+            error_msg = f"Weather service unavailable: {str(e)}"
             self._trigger_callbacks('on_weather_error', error_msg)
             
             if self.root:
                 self.root.after(0, lambda: messagebox.showerror("Connection Error", error_msg))
-                # Reset UI to default state
-                if self.temp_label:
-                    self.root.after(0, lambda: self.temp_label.config(text="--°F"))
-                if self.city_label:
-                    self.root.after(0, lambda: self.city_label.config(text="Connection Error"))
 
+
+   
+    def refresh_for_location(self, city, country):
+            """Refresh weather data for a specific location"""
+            self.get_weather_threaded(city, country)
+   
+   
     def extract_five_day_summary(self, forecast):
         """Extract 5-day forecast summary from API response"""
         forecast_list = forecast.get("list", [])
@@ -254,7 +265,6 @@ class GetWeather:
             return []
    
     def update_hourly_forecast(self, city, country, units):
-        """Update hourly forecast with uniform, evenly distributed cards - DEBUGGING VERSION"""
         try:           
             scroll_frame = None
             
@@ -303,14 +313,11 @@ class GetWeather:
            
             container_frame = tk.Frame(scroll_frame, bg="#f8fafc")
             container_frame.pack(fill="x", expand=False, padx=5, pady=5)
-
-         
             num_cards = min(len(hourly_data), 8)     
             card_width = 105 
             card_height = 160         
             card_spacing = 4  
 
-   
             try:
                 from features.weather_icons import WeatherIconManager
                 icon_mgr = WeatherIconManager()
@@ -323,10 +330,8 @@ class GetWeather:
             except ImportError:
                 WeatherEmoji = None
                 self.logger.warning("WeatherEmoji not available")
-
-            # SIMPLIFIED TIME FORMATTING FUNCTION
-            def format_time_for_display(time_str):
-                """Convert time to Eastern Time and format for compact display - SIMPLIFIED VERSION"""
+          
+            def format_time_for_display(time_str):                
                 try:
                     print(f"DEBUG: Input time_str: '{time_str}' (type: {type(time_str)})")
                     
@@ -339,14 +344,12 @@ class GetWeather:
                     import pytz
                     
                     # Try different parsing approaches
-                    dt = None
-                    
-                    # Method 1: If it's already a datetime object
+                    dt = None                    
+                
                     if isinstance(time_str, datetime):
                         dt = time_str
                         print(f"DEBUG: Input is datetime object: {dt}")
-                    
-                    # Method 2: Try parsing common formats
+                                     
                     elif isinstance(time_str, str):
                         formats_to_try = [
                             "%Y-%m-%d %H:%M:%S",  

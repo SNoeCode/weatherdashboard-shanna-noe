@@ -181,3 +181,37 @@ Timestamp,City,State,Country,Temperature,Feels Like,Humidity,Precipitation,Press
 08-05-25 23:42:56,Knoxville,TN,US,75.0,75.0,81.5,N/A,1020.4,N/A,N/A,N/A,N/A,N/A,Excellent,858
 08-05-25 23:44:18,Knoxville,US,US,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,Poor,5
 08-05-25 23:44:19,Nashville,US,US,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,Poor,5
+08-07-25 20:34:12,Knoxville,TN,US,75.0,75.0,81.5,N/A,1020.4,N/A,N/A,N/A,N/A,N/A,Excellent,859
+08-07-25 21:20:01,Knoxville,TN,US,75.0,75.0,81.4,N/A,1020.4,N/A,N/A,N/A,N/A,N/A,Excellent,866
+08-07-25 21:24:09,Knoxville,TN,US,75.0,75.0,81.4,N/A,1020.4,N/A,N/A,N/A,N/A,N/A,Excellent,867
+08-07-25 21:28:55,new york,ny,US,71.0,71.0,61.0,N/A,1026.0,10.4,N/A,N/A,N/A,N/A,Poor,2
+08-07-25 21:33:02,Knoxville,US,US,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,Poor,5
+08-07-25 21:33:03,Nashville,US,US,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,Poor,5
+08-08-25 15:08:28,Knoxville,TN,US,75.1,75.1,81.4,N/A,1020.4,N/A,N/A,N/A,N/A,N/A,Excellent,880
+08-08-25 15:09:38,Knoxville,US,US,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,Poor,5
+08-08-25 15:09:39,Nashville,US,US,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,Poor,5
+08-08-25 15:47:54,Knoxville,TN,US,75.1,75.1,81.3,N/A,1020.4,N/A,N/A,N/A,N/A,N/A,Excellent,888
+08-08-25 15:48:43,nashville,TN,US,77.9,77.9,71.3,N/A,1019.7,5.5,N/A,N/A,N/A,N/A,Excellent,396
+08-08-25 16:07:47,Knoxville,TN,US,75.2,75.2,81.1,N/A,1020.4,N/A,N/A,N/A,N/A,N/A,Excellent,894
+08-08-25 16:25:40,Knoxville,TN,US,75.3,75.3,81.0,N/A,1020.4,N/A,N/A,N/A,N/A,N/A,Excellent,901
+08-08-25 17:00:31,Knoxville,TN,US,75.5,75.5,80.7,N/A,1020.3,N/A,N/A,N/A,N/A,N/A,Excellent,914
+08-08-25 17:07:02,Knoxville,TN,US,75.5,75.5,80.6,N/A,1020.3,N/A,N/A,N/A,N/A,N/A,Excellent,918
+08-08-25 17:09:29,Knoxville,US,US,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,Poor,5
+08-08-25 17:09:30,Nashville,US,US,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,Poor,5
+08-08-25 17:09:43,Knoxville,US,US,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,Poor,5
+08-08-25 17:09:44,San Diego,US,US,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,Poor,5
+08-08-25 17:09:52,Knoxville,TN,US,75.5,75.5,80.5,N/A,1020.3,N/A,N/A,N/A,N/A,N/A,Excellent,921
+08-08-25 17:10:04,san diego,TN,US,79.7,79.7,67.4,N/A,1013.0,9.0,N/A,N/A,N/A,N/A,Poor,5
+08-08-25 17:32:33,Knoxville,TN,US,75.7,75.7,80.2,N/A,1020.3,N/A,N/A,N/A,N/A,N/A,Excellent,935
+08-08-25 17:40:01,Knoxville,TN,US,75.8,75.8,80.1,N/A,1020.2,N/A,N/A,N/A,N/A,N/A,Excellent,943
+08-08-25 17:59:29,Knoxville,TN,US,75.8,75.8,79.9,N/A,1020.2,N/A,N/A,N/A,N/A,N/A,Excellent,948
+08-08-25 18:02:00,st louis,TN,US,80.2,80.2,65.1,N/A,1019.3,4.4,N/A,N/A,N/A,N/A,Excellent,408
+08-08-25 18:02:39,Knoxville,US,US,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,Poor,5
+08-08-25 18:02:40,St Louis,US,US,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,Poor,5
+08-08-25 18:21:13,Knoxville,TN,US,75.9,75.9,79.8,N/A,1020.2,N/A,N/A,N/A,N/A,N/A,Excellent,954
+08-08-25 18:37:47,Knoxville,TN,US,76.0,76.0,79.7,N/A,1020.2,N/A,N/A,N/A,N/A,N/A,Excellent,959
+08-08-25 18:58:52,Knoxville,TN,US,76.0,76.0,79.6,N/A,1020.2,N/A,N/A,N/A,N/A,N/A,Excellent,964
+08-08-25 19:07:41,Knoxville,TN,US,76.1,76.1,79.5,N/A,1020.2,N/A,N/A,N/A,N/A,N/A,Excellent,969
+08-08-25 19:09:17,Knoxville,US,US,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,Poor,5
+08-08-25 19:09:18,Nashville,US,US,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,Poor,5
+08-08-25 19:18:45,Knoxville,TN,US,76.1,76.1,79.4,N/A,1020.2,N/A,N/A,N/A,N/A,N/A,Excellent,975

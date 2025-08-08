@@ -6,10 +6,8 @@ from tkinter import ttk, messagebox, filedialog
 from PIL import Image, ImageTk
 import threading
 import pandas as pd
-
 from services.weather_stats import get_weather_stats
 from features.theme_switcher import ThemeManager
-
 from components.creater_header import CreateHeader
 from components.create_feature_tabs import CreateFeatureTabs
 from components.display_features_ui import DisplayFeatures
@@ -64,9 +62,9 @@ class WeatherAppGUI:
         self.summary_label = ttk.Label(self.root, text="", font=("Segoe UI", 10), foreground="#334155")
         self.summary_label.grid(row=2, column=0, sticky="w", padx=20, pady=(10, 0))
 
-  
     def setup_components(self):
         
+        # 1. Create GetWeather component first
         self.get_weather_component = GetWeather(
             fetcher=self.fetcher,
             db=self.db,
@@ -74,16 +72,8 @@ class WeatherAppGUI:
             root=self.root
         )
         self.get_weather = self.get_weather_component
-        self.header_component = CreateHeader(
-            root=self.root,
-            get_weather_callback=self.get_weather_component.get_weather_threaded
-           
-        )
-        self.city_entry = self.header_component.city_entry
-        self.country_entry = self.header_component.country_entry
 
-
-        # 3. Feature Tabs Component - Create this FIRST
+        # 2. Feature Tabs Component - Create this NEXT
         self.feature_tabs_component = CreateFeatureTabs(
             parent=self.root,
             fetcher=self.fetcher,
@@ -99,7 +89,7 @@ class WeatherAppGUI:
         # Create the notebook from tabs component
         self.notebook = self.feature_tabs_component.create_tab_interface()
 
-        # 4. Dashboard Layout Component - Add dashboard to existing notebook
+        # 3. Dashboard Layout Component - Add dashboard to existing notebook
         dashboard_frame = ttk.Frame(self.notebook)
         self.notebook.insert(0, dashboard_frame, text="🌤️ Dashboard")
         
@@ -118,15 +108,8 @@ class WeatherAppGUI:
         
         # THEN collect widget references
         self.collect_widget_references()
-        
-        # Set UI references for dashboard component
-        if hasattr(self.dashboard_layout_component, 'set_ui_references'):
-            self.dashboard_layout_component.set_ui_references(
-                city_entry=self.city_entry,
-                country_entry=self.country_entry
-            )
-        
-        # 5. Display Features Component
+
+        # 4. Display Features Component
         self.display_features_component = DisplayFeatures(
             parent=self.root,
             theme_manager=self.theme_manager,
@@ -134,11 +117,35 @@ class WeatherAppGUI:
             logger=self.logger,
             fetcher=self.fetcher,
             cfg=self.cfg,
-            city_entry=self.city_entry,
-            country_entry=self.country_entry
+            city_entry=None, 
+            country_entry=None  
         )
         
-        # Set ALL UI references for GetWeather component
+        # 5. Set up refresh callbacks BEFORE creating header
+        refresh_callbacks = {
+            'weather_data': self.get_weather_component.get_weather_threaded,
+            'dashboard_hourly': lambda city, country: self.dashboard_layout_component.update_hourly_forecast(
+                city, country, "imperial" if country.upper() == "US" else "metric"
+            ) if hasattr(self.dashboard_layout_component, 'update_hourly_forecast') else None,
+            'temperature_graph': lambda city, country: self.display_features_component.update_temperature_graph(city, country),
+            'tomorrow_prediction': lambda city, country: self.feature_tabs_component.update_tomorrow_prediction_location(city, country),
+            'forecast_display': lambda city, country: self.display_features_component.refresh_for_location(city, country),
+            'all_panels_update': lambda city, country: self.feature_tabs_component.update_location_for_all_panels(city, country),
+            'refresh_all_panels': lambda city, country: self.feature_tabs_component.refresh_all_panels()
+        }
+        
+        # 6. Create Header Component with proper callbacks
+        self.header_component = CreateHeader(
+            root=self.root,
+            get_weather_callback=self.get_weather_component.get_weather_threaded,
+            refresh_callbacks=refresh_callbacks
+        )
+
+        # 7. Get entry references from header
+        self.city_entry = self.header_component.city_entry
+        self.country_entry = self.header_component.country_entry
+        
+        # 8. Set ALL UI references for GetWeather component
         self.get_weather_component.set_ui_references(
             city_entry=self.city_entry,
             country_entry=self.country_entry,
@@ -152,10 +159,10 @@ class WeatherAppGUI:
             graph_container=self.graph_container
         )
         
-        # Set display component reference
+        # 9. Set display component reference
         self.get_weather_component.set_display_component(self.display_features_component)
         
-        # Set UI references for display component
+        # 10. Set UI references for display component
         self.display_features_component.set_ui_references(
             temp_label=self.temp_label,
             city_label=self.city_label,
@@ -167,18 +174,35 @@ class WeatherAppGUI:
             graph_container=self.graph_container,
             activity_content_frame=self.activity_content_frame
         )
+        
+        # Update display component with entry references
+        self.display_features_component.city_entry = self.city_entry
+        self.display_features_component.country_entry = self.country_entry
 
-        # Register callbacks - This is CRITICAL!
+        # 11. Register callbacks - This is CRITICAL!
         self.get_weather_component.register_callback('on_weather_success', 
             self.display_features_component.display_current_weather)
         self.get_weather_component.register_callback('on_forecast_success', 
             self.display_features_component.display_forecast)
-        # 🔗 Register weather display callback
+        
+        # 12. Register weather display callback for dashboard
         self.get_weather_component.register_callback(
             "on_weather_success", 
             self.dashboard_layout_component.update_weather_display
         )
-        # Optional: Register temperature graph callback if it exists
+        self.get_weather_component.register_callback(
+            'on_weather_success',
+            lambda weather_data, units: self.feature_tabs_component.update_weather_data(weather_data)
+        )
+        self.get_weather_component.register_callback(
+            'on_weather_success',
+            lambda weather_data, units: self.feature_tabs_component.update_tomorrow_prediction_location(
+                weather_data.get('city', self.get_city()),
+                self.country_entry.get().strip() or "US"
+            )
+        )
+        
+        # 13. Optional: Register temperature graph callback if it exists
         if hasattr(self.display_features_component, 'update_temperature_graph'):
             self.get_weather_component.register_callback(
                 'on_weather_success',
@@ -187,15 +211,42 @@ class WeatherAppGUI:
                     self.country_entry.get().strip() or "US"
                 )
             )
+            
+        # 14. Set UI references for dashboard component
+        if hasattr(self.dashboard_layout_component, 'set_ui_references'):
+            self.dashboard_layout_component.set_ui_references(
+                city_entry=self.city_entry,
+                country_entry=self.country_entry
+            )
 
-        self.logger.info("All components initialized and connected successfully")
-        def dummy_toggle_theme(self):
-            """Dummy callback that does nothing - satisfies the required parameter"""
-            pass
+        # 15. Register location change callback - MOVED INSIDE METHOD
+        self.get_weather_component.register_callback('on_weather_success', self.on_location_change_callback)
+
+        print("DEBUG: Setup components completed with all refresh callbacks configured")
+        print(f"DEBUG: Refresh callbacks registered: {list(refresh_callbacks.keys())}")
+        
+        # Log the callback registrations for debugging
+        for callback_type, callbacks in self.get_weather_component.ui_callbacks.items():
+            print(f"DEBUG: {callback_type}: {len(callbacks)} callbacks registered")
+
+    def on_location_change_callback(self, weather_data, units):
+        """Called when weather data changes - updates all location-dependent features"""
+        try:
+            city = weather_data.get('city', self.get_city())
+            country = self.country_entry.get().strip() or "US"
+            
+            # Update all panels with new location
+            self.feature_tabs_component.update_location_for_all_panels(city, country)
+            
+            # Specifically update tomorrow's prediction
+            self.feature_tabs_component.update_tomorrow_prediction_location(city, country)
+            
+            self.logger.info(f"Location change processed for {city}, {country}")
+            
+        except Exception as e:
+            self.logger.error(f"Error in location change callback: {e}")
 
     def start_default_weather_fetch(self):
-        """Set default city/country and fetch weather"""
-        # Set default values in the entry fields
         self.city_entry.delete(0, tk.END)
         self.city_entry.insert(0, "Knoxville")
         self.country_entry.delete(0, tk.END)
@@ -203,7 +254,6 @@ class WeatherAppGUI:
         
         # Now fetch weather using the entries
         self.get_weather_component.get_weather_threaded()
-
 
     def collect_widget_references(self):
         """Collect widget references from dashboard layout component"""
@@ -223,12 +273,12 @@ class WeatherAppGUI:
             for name, widget in widgets.items():
                 self.logger.info(f"  {name}: {'Found' if widget else 'None'}")
         else:
-            self.logger.er
-        def get_weather_threaded(self):
-            """Use component's weather fetching"""
-            self.get_weather_component.get_weather_threaded()
+            self.logger.error("Dashboard layout component has no widgets attribute")
 
-   
+    def get_weather_threaded(self):
+        """Use component's weather fetching"""
+        self.get_weather_component.get_weather_threaded()
+
     def get_city(self):
         return self.city_entry.get().strip() or "Knoxville"
 
