@@ -215,3 +215,12 @@ Timestamp,City,State,Country,Temperature,Feels Like,Humidity,Precipitation,Press
 08-08-25 19:09:17,Knoxville,US,US,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,Poor,5
 08-08-25 19:09:18,Nashville,US,US,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,Poor,5
 08-08-25 19:18:45,Knoxville,TN,US,76.1,76.1,79.4,N/A,1020.2,N/A,N/A,N/A,N/A,N/A,Excellent,975
+08-08-25 20:17:14,Knoxville,TN,US,76.1,76.1,79.3,N/A,1020.1,N/A,N/A,N/A,N/A,N/A,Excellent,980
+08-08-25 20:29:59,Knoxville,TN,US,76.1,76.1,79.3,N/A,1020.1,N/A,N/A,N/A,N/A,N/A,Excellent,985
+08-08-25 20:31:40,Knoxville,TN,US,76.2,76.2,79.2,N/A,1020.1,N/A,N/A,N/A,N/A,N/A,Excellent,990
+08-08-25 20:32:29,Knoxville,US,US,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,Poor,5
+08-08-25 20:32:30,Nashville,US,US,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,Poor,5
+08-08-25 20:32:41,st louis,TN,US,81.1,81.1,64.2,N/A,1018.8,4.9,N/A,N/A,N/A,N/A,Excellent,441
+08-08-25 20:36:34,Knoxville,TN,US,76.2,76.2,79.2,N/A,1020.1,N/A,N/A,N/A,N/A,N/A,Excellent,996
+08-08-25 20:44:01,Knoxville,US,US,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,Poor,5
+08-08-25 20:44:02,Nashville,US,US,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,Poor,5

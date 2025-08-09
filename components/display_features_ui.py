@@ -363,7 +363,7 @@ class DisplayFeatures:
         except Exception as e:
             self.logger.error(f"Error in display_forecast: {e}")
 
-    
+    # ... (keep all other methods like update_hourly_forecast, extract_hourly_from_forecast, update_temperature_graph)
     
     def update_hourly_forecast(self, city, country, units):      
         try:
@@ -528,6 +528,7 @@ class DisplayFeatures:
             self.logger.error(f"Error extracting hourly from forecast: {e}")
             return []
 
+     
     def update_temperature_graph(self, city, country):      
         try:
             graph_container = self.widgets.get('graph_container')
@@ -541,38 +542,29 @@ class DisplayFeatures:
             
             self.logger.info(f"Fetching temperature graph data for {city}, {country}")
             
-            # ⭐ CRITICAL: Force insert current data if available
+            # Ensure we have current data first
             if hasattr(self, 'current_weather_data') and self.current_weather_data:
                 try:
-                    # Force re-insert to ensure data is in database
-                    success = self.db.insert_reading(self.current_weather_data)
-                    if success:
-                        self.logger.info("Successfully ensured current weather data is in database")
-                    else:
-                        self.logger.warning("Failed to insert current weather data")
+                    self.db.insert_reading(self.current_weather_data)
+                    self.logger.info("Ensured current weather data is in database")
                 except Exception as e:
                     self.logger.warning(f"Could not insert current data: {e}")
             
-            # ⭐ ENHANCED: Try multiple approaches to get readings
+            # Try different time ranges to get data with case-insensitive search
             readings = None
-            
-            # Method 1: Direct database query with case variations
-            for hours in [1, 6, 12, 24, 48, 72, 168, 720, 8760]:  # Start with 1 hour
+            for hours in [24, 48, 72, 168, 720, 8760]:  # Up to 1 year
                 try:
                     # Try exact match first
                     readings = self.db.fetch_recent(city, country, hours=hours)
-                    self.logger.info(f"Method 1 - {hours}h: Found {len(readings) if readings else 0} readings")
                     
                     # If no exact match, try case variations
-                    if not readings or len(readings) == 0:
+                    if not readings or len(readings) <= 1:
                         readings = self.db.fetch_recent(city.title(), country.upper(), hours=hours)
-                        self.logger.info(f"Method 1b - {hours}h: Found {len(readings) if readings else 0} readings with title/upper case")
                     
-                    if not readings or len(readings) == 0:
+                    if not readings or len(readings) <= 1:
                         readings = self.db.fetch_recent(city.lower(), country.lower(), hours=hours)
-                        self.logger.info(f"Method 1c - {hours}h: Found {len(readings) if readings else 0} readings with lower case")
                     
-                    if readings and len(readings) >= 1:  # Changed from > 1 to >= 1
+                    if readings and len(readings) > 1:
                         self.logger.info(f"Found {len(readings)} readings in last {hours} hours")
                         break
                         
@@ -580,12 +572,11 @@ class DisplayFeatures:
                     self.logger.warning(f"Error fetching data for {hours}h range: {e}")
                     continue
             
-            # Method 2: Get all readings and filter manually
-            if not readings or len(readings) == 0:
+            # Alternative: Get all readings and filter by city/country manually
+            if not readings or len(readings) <= 1:
                 try:
-                    self.logger.info("Trying alternative data fetch method - getting all readings")
+                    self.logger.info("Trying alternative data fetch method")
                     all_readings = self.db.get_all_readings()
-                    self.logger.info(f"Total readings in database: {len(all_readings)}")
                     
                     # Filter manually with case-insensitive matching
                     city_lower = city.lower()
@@ -593,9 +584,8 @@ class DisplayFeatures:
                     
                     matching_readings = []
                     for reading in all_readings:
-                        reading_city = reading.get('city', '').lower()
-                        reading_country = reading.get('country', '').lower()
-                        if reading_city == city_lower and reading_country == country_lower:
+                        if (reading.get('city', '').lower() == city_lower and 
+                            reading.get('country', '').lower() == country_lower):
                             matching_readings.append(reading)
                     
                     if matching_readings:
@@ -605,27 +595,11 @@ class DisplayFeatures:
                 except Exception as e:
                     self.logger.error(f"Alternative fetch method failed: {e}")
             
-            # Method 3: Force a fresh weather fetch if still no data
-            if not readings or len(readings) == 0:
-                self.logger.info("No historical data found, fetching fresh weather data")
-                try:
-                    fresh_data = self.fetcher.fetch_current_weather(city, country)
-                    if fresh_data:
-                        self.db.insert_reading(fresh_data)
-                        # Recursive call with short delay
-                        self.root.after(1000, lambda: self.update_temperature_graph(city, country))
-                        self._show_placeholder_message(graph_container, f"Fetching data for {city}...\nPlease wait...")
-                        return
-                except Exception as fetch_error:
-                    self.logger.error(f"Fresh data fetch failed: {fetch_error}")
-            
             # Debug: Show what we found
             if readings:
                 self.logger.info(f"Sample reading data: {readings[0] if readings else 'None'}")
-                self.logger.info(f"All readings cities: {[r.get('city') for r in readings[:5]]}")
             
-            # ⭐ MODIFIED: Show graph even with single data point
-            if readings and len(readings) >= 1:  # Changed from > 1 to >= 1            
+            if readings and len(readings) > 1:             
                 import pandas as pd
                 import matplotlib.pyplot as plt
                 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -658,25 +632,16 @@ class DisplayFeatures:
                             times = df['timestamp'].tolist()
                             
                             self.logger.info(f"Temperature range: {min(temps):.1f} to {max(temps):.1f}{temp_unit}")
-                            
-                            # ⭐ SINGLE POINT HANDLING: Show point even if only one data point
-                            if len(temps) == 1:
-                                ax1.scatter(times, temps, color='#ef4444', s=100, zorder=5)
-                                ax1.axhline(y=temps[0], color='#ef4444', linestyle='--', alpha=0.5)
-                            else:
-                                ax1.plot(times, temps, color='#ef4444', linewidth=2, marker='o', markersize=4)
-                            
+                                        
+                            ax1.plot(times, temps, color='#ef4444', linewidth=2, marker='o', markersize=4)
                             ax1.set_ylabel(f'Temperature ({temp_unit})', color='#ef4444', fontsize=10)
                             ax1.tick_params(axis='y', labelcolor='#ef4444')
                             ax1.grid(True, alpha=0.3)
                             ax1.set_title(f'Weather Trends for {city}, {country}', fontsize=12, pad=15)
                             
-                            # Add temperature info
-                            if len(temps) == 1:
-                                temp_info = f"Current: {temps[0]:.1f}°"
-                            else:
-                                temp_info = f"Range: {min(temps):.1f}° - {max(temps):.1f}°"
-                            ax1.text(0.02, 0.98, temp_info, transform=ax1.transAxes, 
+                            # Add temperature range text
+                            temp_range = f"Range: {min(temps):.1f}° - {max(temps):.1f}°"
+                            ax1.text(0.02, 0.98, temp_range, transform=ax1.transAxes, 
                                     verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
                         else:
                             ax1.text(0.5, 0.5, 'No temperature data available', 
@@ -685,11 +650,7 @@ class DisplayFeatures:
                         # Second subplot - humidity and/or pressure
                         if 'humidity' in df.columns and df['humidity'].notna().any():
                             humidity = df['humidity'].astype(float).tolist()
-                            if len(humidity) == 1:
-                                ax2.scatter(times, humidity, color='#3b82f6', s=100, zorder=5)
-                                ax2.axhline(y=humidity[0], color='#3b82f6', linestyle='--', alpha=0.5)
-                            else:
-                                ax2.plot(times, humidity, color='#3b82f6', linewidth=2, marker='s', markersize=3)
+                            ax2.plot(times, humidity, color='#3b82f6', linewidth=2, marker='s', markersize=3)
                             ax2.set_ylabel('Humidity (%)', color='#3b82f6')
                             ax2.tick_params(axis='y', labelcolor='#3b82f6')
                             
@@ -697,11 +658,7 @@ class DisplayFeatures:
                             if 'pressure' in df.columns and df['pressure'].notna().any():
                                 pressure = df['pressure'].astype(float).tolist()
                                 ax2_twin = ax2.twinx()
-                                if len(pressure) == 1:
-                                    ax2_twin.scatter(times, pressure, color='#10b981', s=80, marker='^', zorder=5)
-                                    ax2_twin.axhline(y=pressure[0], color='#10b981', linestyle='--', alpha=0.5)
-                                else:
-                                    ax2_twin.plot(times, pressure, color='#10b981', linewidth=2, marker='^', markersize=3)
+                                ax2_twin.plot(times, pressure, color='#10b981', linewidth=2, marker='^', markersize=3)
                                 ax2_twin.set_ylabel('Pressure (hPa)', color='#10b981')
                                 ax2_twin.tick_params(axis='y', labelcolor='#10b981')
                         else:
@@ -710,29 +667,24 @@ class DisplayFeatures:
                             ax2.set_ylabel('Collecting data...')
                         
                         ax2.grid(True, alpha=0.3)                
-
+                    
                         # Format x-axis based on time span
-                        if len(times) >= 1:
-                            if len(times) == 1:
-                                # Single point - just show the time
+                        if len(times) > 1:
+                            time_span = (max(times) - min(times)).total_seconds() / 3600
+                            if time_span <= 24:
                                 ax2.xaxis.set_major_formatter(DateFormatter('%H:%M'))
                                 ax2.set_xlabel('Time')
+                            elif time_span <= 168:  # 1 week
+                                ax2.xaxis.set_major_formatter(DateFormatter('%m/%d %H:%M'))
+                                ax2.set_xlabel('Date & Time')
                             else:
-                                time_span = (max(times) - min(times)).total_seconds() / 3600
-                                if time_span <= 24:
-                                    ax2.xaxis.set_major_formatter(DateFormatter('%H:%M'))
-                                    ax2.set_xlabel('Time')
-                                elif time_span <= 168:  # 1 week
-                                    ax2.xaxis.set_major_formatter(DateFormatter('%m/%d %H:%M'))
-                                    ax2.set_xlabel('Date & Time')
-                                else:
-                                    ax2.xaxis.set_major_formatter(DateFormatter('%m/%d'))
-                                    ax2.set_xlabel('Date')
-                                    
+                                ax2.xaxis.set_major_formatter(DateFormatter('%m/%d'))
+                                ax2.set_xlabel('Date')
+                                
                             plt.setp(ax2.xaxis.get_majorticklabels(), rotation=45)
                         
                         fig.tight_layout()                
-
+                    
                         canvas = FigureCanvasTkAgg(fig, graph_container)
                         canvas.draw()
                         canvas.get_tk_widget().pack(fill='both', expand=True)
@@ -748,7 +700,7 @@ class DisplayFeatures:
                     self._show_error_message(graph_container, "Data format error: No timestamps")
                         
             else:
-                self.logger.info(f"No data available for {city} graph: {len(readings) if readings else 0} readings")
+                self.logger.info(f"Insufficient data for {city} graph: {len(readings) if readings else 0} readings")
                 
                 # Show helpful message with data collection info
                 message = f"Collecting weather data for {city}...\n"
@@ -756,10 +708,20 @@ class DisplayFeatures:
                     message += f"({len(readings)} reading{'s' if len(readings) != 1 else ''} so far)\n"
                 else:
                     message += "(0 readings so far)\n"
-                message += "Graph will appear after data collection."
+                message += "Graph will appear after multiple data points are collected."
                 
                 self._show_placeholder_message(graph_container, message)
                 
+                # Try to collect more data immediately
+                try:
+                    self.logger.info("Attempting to fetch current weather to populate database")
+                    current_data = self.fetcher.fetch_current_weather(city, country)
+                    if current_data:
+                        self.db.insert_reading(current_data)
+                        self.logger.info("Added current weather data to database")
+                except Exception as fetch_error:
+                    self.logger.warning(f"Could not fetch additional data: {fetch_error}")
+                        
         except Exception as e:
             self.logger.error(f"Error updating temperature graph: {e}")
             import traceback
@@ -768,53 +730,38 @@ class DisplayFeatures:
                 self._show_error_message(self.widgets['graph_container'], f"Graph error: {str(e)}")
 
 
-    # Helper method for placeholder messages
     def _show_placeholder_message(self, container, message):
-        """Show a placeholder message in the graph container"""
-        try:
-            import tkinter as tk
-            
-            # Clear container
-            for widget in container.winfo_children():
-                widget.destroy()
-            
-            # Create message label
-            message_label = tk.Label(
-                container, 
-                text=message,
-                font=("Segoe UI", 12),
-                fg="#64748b",
-                bg="white",
-                justify=tk.CENTER
-            )
-            message_label.pack(expand=True, fill='both')
-            
-        except Exception as e:
-            self.logger.error(f"Error showing placeholder message: {e}")
+        """Show placeholder message when no data is available"""
+        import tkinter as tk
+        placeholder = tk.Label(container,
+                            text=f"📊 {message}",
+                            font=("Segoe UI", 12), 
+                            bg="white", 
+                            fg="#6b7280",
+                            wraplength=300,
+                            justify="center")
+        placeholder.pack(expand=True)
+    def _show_placeholder_message(self, container, message):
+        """Show placeholder message when no data is available"""
+        placeholder = tk.Label(container,
+                            text=f"📊 {message}",
+                            font=("Segoe UI", 12), 
+                            bg="white", 
+                            fg="#6b7280",
+                            wraplength=300,
+                            justify="center")
+        placeholder.pack(expand=True)
 
     def _show_error_message(self, container, message):
-        """Show an error message in the graph container"""
-        try:
-            import tkinter as tk
-            
-            # Clear container
-            for widget in container.winfo_children():
-                widget.destroy()
-            
-            # Create error label
-            error_label = tk.Label(
-                container, 
-                text=f"⚠️ {message}",
-                font=("Segoe UI", 11),
-                fg="#dc2626",
-                bg="white",
-                justify=tk.CENTER
-            )
-            error_label.pack(expand=True, fill='both')
-            
-        except Exception as e:
-            self.logger.error(f"Error showing error message: {e}")
- 
+        """Show error message in graph container"""
+        error_label = tk.Label(container,
+                            text=f"⚠️ {message}",
+                            font=("Segoe UI", 12), 
+                            bg="white", 
+                            fg="#e74c3c",
+                            wraplength=300,
+                            justify="center")
+        error_label.pack(expand=True)
     def get_widget(self, widget_name):       
         return self.widgets.get(widget_name)
 
