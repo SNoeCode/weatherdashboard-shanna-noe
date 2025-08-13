@@ -225,7 +225,7 @@ class TomorrowGuessPanel:
             self.predict_button.configure(text="🔄 Analyzing...", state='disabled', bg='#6c757d')
             self.prediction_container.update_idletasks()
             # Fetch recent weather data
-            readings = self.db.fetch_recent("Knoxville", "US", hours=72)
+            readings = self.db.fetch_recent(self.current_city, self.current_country, hours=72)
             
             if not readings or len(readings) < 2:
                 self.show_error("Insufficient weather data for prediction.\nPlease ensure weather data is being collected.")
